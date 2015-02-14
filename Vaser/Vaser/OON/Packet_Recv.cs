@@ -11,13 +11,13 @@ namespace Vaser
     {
         public Link link;
 
-        public int ClassID = -1;
+        internal int ClassID = -1;
         public int ObjectID = -1;
         public int ContainerID = -1;
-        public long StreamPosition = -1;
-        public int PacketSize = -1;
+        internal long StreamPosition = -1;
+        internal int PacketSize = -1;
 
-        public Packet_Recv(Link ilink, BinaryReader data)
+        internal Packet_Recv(Link ilink, BinaryReader data)
         {
             link = ilink;
 

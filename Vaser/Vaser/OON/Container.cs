@@ -24,28 +24,20 @@ namespace Vaser
         private long _pos1 = 0;
         private long _pos2 = 0;
 
-        private int _ID = 0;
-
-        public void RegisterID(int i)
+        internal delegate void readdata(FieldInfo field, Portal portal);
+        internal delegate void writedata(FieldInfo field);
+        internal class racefield
         {
-            _ID = i;
-        }
-
-        //public int ID;
-        public delegate void readdata(FieldInfo field, Portal portal);
-        public delegate void writedata(FieldInfo field);
-        public class racefield
-        {
-            public racefield(FieldInfo f, readdata r, writedata w)
+            internal racefield(FieldInfo f, readdata r, writedata w)
             {
                 FI = f;
                 rd = r;
                 wd = w;
             }
 
-            public FieldInfo FI = null;
-            public readdata rd = null;
-            public writedata wd = null;
+            internal FieldInfo FI = null;
+            internal readdata rd = null;
+            internal writedata wd = null;
         }
 
         public Container()
@@ -54,6 +46,17 @@ namespace Vaser
             _bw = new BinaryWriter(_ms);
 
             ScanObjects();
+        }
+
+        /// <summary>
+        /// free all Container resources
+        /// </summary>
+        public void Dispose()
+        {
+            _bw.Dispose();
+            _ms.Dispose();
+            _FieldList.Clear();
+
         }
 
         void ScanObjects()
@@ -82,7 +85,7 @@ namespace Vaser
             }
         }
 
-        public Packet_Send PackDataObject()
+        internal Packet_Send PackDataObject()
         {
             _SendPacket = new Packet_Send();
             _ms.SetLength(0);
@@ -97,19 +100,33 @@ namespace Vaser
             return _SendPacket;
         }
 
-        public void UnpackDataObject(Packet_Recv pak, Portal portal)
+        /// <summary>
+        /// Unpacks a Packet_Recv data into the variables.
+        /// </summary>
+        /// <param name="pak">the packet</param>
+        /// <param name="portal">the portal</param>
+        /// <returns>true if the decode was successful</returns>
+        public bool UnpackDataObject(Packet_Recv pak, Portal portal)
         {
-            portal.rms2.Position = pak.StreamPosition;
-            _ReadCounter = 0;
-            _ReadSize = pak.PacketSize;
-
-            foreach (racefield Rfield in _FieldList)
+            try
             {
-                Rfield.rd(Rfield.FI, portal);
+                portal.rms2.Position = pak.StreamPosition;
+                _ReadCounter = 0;
+                _ReadSize = pak.PacketSize;
+
+                foreach (racefield Rfield in _FieldList)
+                {
+                    Rfield.rd(Rfield.FI, portal);
+                }
+                return true;
+            }catch(Exception e)
+            {
+                Console.WriteLine("Vaser packet decode error: ClassID> " + pak.ClassID + " ContainerID> " + pak.ContainerID + " ObjectID> " + pak.ObjectID + " Packetsize> " + pak.PacketSize + " StreamPosition> " + pak.StreamPosition + " MEM L> " + portal.rms2.Length + " P> " + portal.rms2.Position);
+                return false;
             }
         }
 
-        public racefield BuildRaceField(FieldInfo field)
+        internal racefield BuildRaceField(FieldInfo field)
         {
             Type typ = field.FieldType;
 
@@ -297,7 +314,7 @@ namespace Vaser
 
         }
 
-        public Packet_Send GetSendPacket()
+        internal Packet_Send GetSendPacket()
         {
             return _SendPacket;
         }

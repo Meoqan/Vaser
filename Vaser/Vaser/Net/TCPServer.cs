@@ -19,24 +19,9 @@ namespace Vaser
 
         private SemaphoreSlim _ConnectionList_ThreadLock = new SemaphoreSlim(1);
         private List<Connection> _ConnectionList = new List<Connection>();
-        private List<Link> _NewLinkList = new List<Link>();
+        private List<Link> NewLinkList = new List<Link>();
 
-        private List<Link> NewLinkList
-        {
-            get
-            {
-                _ThreadLock.Wait();
-                List<Link> ret = _NewLinkList;
-                _ThreadLock.Release();
-                return ret;
-            }
-            set
-            {
-                _ThreadLock.Wait();
-                _NewLinkList = value;
-                _ThreadLock.Release();
-            }
-        }
+       
 
         public List<Connection> ConnectionList
         {
@@ -54,6 +39,7 @@ namespace Vaser
                 _ThreadLock.Release();
             }
         }
+
 
         private bool ServerOnline
         {
@@ -116,32 +102,50 @@ namespace Vaser
 
                     TcpClient Client = this._TCPListener.AcceptTcpClient();
 
-                    Connection con = new Connection(Client, true);
+                    Connection con = new Connection(Client, true, this);
 
+                    _ConnectionList_ThreadLock.Wait();
+                    _ConnectionList.Add(con);
+                    _ConnectionList_ThreadLock.Release();
+
+                    _ThreadLock.Wait();
                     NewLinkList.Add(con.link);
-
+                    _ThreadLock.Release();
                 }
 
                 Thread.Sleep(1);
             }
 
+            _ConnectionList_ThreadLock.Wait();
             foreach (Connection Con in _ConnectionList)
             {
                 Con.Stop();
             }
+            _ConnectionList_ThreadLock.Release();
 
             _TCPListener.Stop();
         }
 
+        internal void RemoveFromConnectionList(Connection con)
+        {
+            _ConnectionList_ThreadLock.Wait();
+            _ConnectionList.Remove(con);
+            _ConnectionList_ThreadLock.Release();
+        }
+
+        /// <summary>
+        /// Get a new Connected Client.
+        /// </summary>
+        /// <returns>Returns null if no new client is connected</returns>
         public Link GetNewLink()
         {
             _ThreadLock.Wait();
             Link lnk = null;
 
-            if (_NewLinkList.Count > 0)
+            if (NewLinkList.Count > 0)
             {
-                lnk = _NewLinkList[0];
-                _NewLinkList.Remove(lnk);
+                lnk = NewLinkList[0];
+                NewLinkList.Remove(lnk);
             }
             _ThreadLock.Release();
 

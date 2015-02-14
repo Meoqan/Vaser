@@ -17,15 +17,17 @@ namespace Vaser
     public class Connection
     {
 
-
         private SemaphoreSlim _Settings_ThreadLock = new SemaphoreSlim(1);
         private bool _ThreadIsRunning = true;
         private bool _StreamIsConnected = true;
         private bool _IsServer = false;
         private NetworkStream _ConnectionStream;
+        private NegotiateStream _AuthStream;
         private Thread _ProcessingDecryptThread;
         private Thread _ClientThread;
         private TcpClient _SocketTCPClient;
+
+        private TCPServer _server;
 
         private Link _link;
         private IPAddress _IPv4Address;
@@ -47,6 +49,9 @@ namespace Vaser
         private BinaryWriter _rbw2 = null;
         private BinaryReader _rbr2 = null;
 
+        /// <summary>
+        /// the IPAdress of the remote end point
+        /// </summary>
         public IPAddress IPv4Address
         {
             get
@@ -64,6 +69,9 @@ namespace Vaser
             }
         }
 
+        /// <summary>
+        /// Link of the connection
+        /// </summary>
         public Link link
         {
             get
@@ -81,6 +89,26 @@ namespace Vaser
             }
         }
 
+        internal TCPServer server
+        {
+            get
+            {
+                _Settings_ThreadLock.Wait();
+                TCPServer ret = _server;
+                _Settings_ThreadLock.Release();
+                return ret;
+            }
+            set
+            {
+                _Settings_ThreadLock.Wait();
+                _server = value;
+                _Settings_ThreadLock.Release();
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets is the thread running
+        /// </summary>
         public bool ThreadIsRunning
         {
             get
@@ -98,6 +126,10 @@ namespace Vaser
             }
         }
 
+        /// <summary>
+        /// is the connectionstream to the remotendpoint online.
+        /// you must send data to ensure that the stream is not dead.
+        /// </summary>
         public bool StreamIsConnected
         {
             get
@@ -119,7 +151,7 @@ namespace Vaser
         /// <summary>
         /// Creates a new connection for processing data
         /// </summary>
-        public Connection(TcpClient client, bool IsServer)
+        public Connection(TcpClient client, bool IsServer, TCPServer srv = null)
         {
             _IsServer = IsServer;
 
@@ -144,6 +176,8 @@ namespace Vaser
 
             _SocketTCPClient = client;
 
+            server = srv;
+
             // encryption
             _SocketTCPClient.LingerState = (new LingerOption(true, 0));
             // encryption END
@@ -166,7 +200,7 @@ namespace Vaser
         /// Send data
         /// </summary>
         /// <param name="Data"></param>
-        public void SendData(byte[] Data)
+        internal void SendData(byte[] Data)
         {
             _WriteStream_Lock.Wait();
             if (StreamIsConnected && _sbw1 != null)
@@ -280,69 +314,55 @@ namespace Vaser
 
         private void HandleClientComm()
         {
-            /*TESTING!
-
-            //Create a network stream from the TCP connection. 
-            NetworkStream NetStream = _ConnectionStream;
-
-            //Create a new instance of the RijndaelManaged class
-            // and encrypt the stream.
-            RijndaelManaged RMCrypto = new RijndaelManaged();
-
-            byte[] Key = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16 };
-            byte[] IV = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16 };
-
-            //Create a CryptoStream, pass it the NetworkStream, and encrypt 
-            //it with the Rijndael class.
-            CryptoStream CryptStream_write = new CryptoStream(NetStream, RMCrypto.CreateEncryptor(Key, IV), CryptoStreamMode.Write);
-            CryptoStream CryptStream_read = new CryptoStream(NetStream, RMCrypto.CreateDecryptor(Key, IV), CryptoStreamMode.Read);
-            //Create a StreamWriter for easy writing to the 
-            //network stream.
-            StreamWriter SWriter = new StreamWriter(CryptStream_write);
-            StreamReader SReader = new StreamReader(CryptStream_read);
-
-            //Write to the stream.
-            SWriter.WriteLine("Hello World!");
-
-            //Inform the user that the message was written
-            //to the stream.
-            Console.WriteLine("The message was sent.");
-
-            Console.WriteLine("The decrypted original message: {0}", SReader.ReadToEnd());
-
-            //Close all the connections.
-            SWriter.Close();
-            SReader.Close();
-            CryptStream_write.Close();
-            CryptStream_read.Close();
-            NetStream.Close();
-            //TESTING! END */
-
-            //System.Net.Security.AuthenticatedStream;
-
-            //_SocketTCPClient.SendBufferSize = 1024 * 1024 * 50;
-            //_SocketTCPClient.ReceiveBufferSize = 1024 * 1024 * 50;
-            //_SocketTCPClient.ReceiveTimeout = 1000;
+            
 
             _ConnectionStream = _SocketTCPClient.GetStream();
             // encryption
-            NegotiateStream authStream = new NegotiateStream(_ConnectionStream, false);
+            _AuthStream = new NegotiateStream(_ConnectionStream, false);
 
             if (_IsServer)
             { //server
-                authStream.AuthenticateAsServer();
+                try
+                {
+                    _AuthStream.AuthenticateAsServer();
+                }
+                catch (AuthenticationException e)
+                {
+                    Console.WriteLine("Authentication failed. " + e.ToString());
+                    Dispose();
+                    return;
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine("Authentication failed. " + e.ToString());
+                    Dispose();
+                    return;
+                }
+
             }
             else
             { //client
-                authStream.AuthenticateAsClient();
+                try
+                {
+                    _AuthStream.AuthenticateAsClient();
+                }
+                catch (AuthenticationException e)
+                {
+                    Console.WriteLine("Authentication failed. " + e.ToString());
+                    Dispose();
+                    return;
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine("Authentication failed. " + e.ToString());
+                    Dispose();
+                    return;
+                }
             }
             
 
             //AuthenticatedStreamReporter.DisplayProperties(authStream);
             // encryption END
-
-
-            //ConnectionStream.ReadTimeout = 1;
 
             int bytesRead;
 
@@ -368,7 +388,7 @@ namespace Vaser
                         while (_ConnectionStream.DataAvailable)
                         {
                             //Console.WriteLine("Stream ReadLength b4 read" );
-                            bytesRead = authStream.Read(buff, 0, buff.Length);
+                            bytesRead = _AuthStream.Read(buff, 0, buff.Length);
                             //Console.WriteLine("Stream ReadLength b4 end" );
                             _ReadStream_Lock.Wait();
                             _rbw1.Write(buff, 0, bytesRead);
@@ -406,7 +426,7 @@ namespace Vaser
                                 if (data != null)
                                 {
                                     //Console.WriteLine("Data written: " + data.Length);
-                                    authStream.Write(data, 0, data.Length);
+                                    _AuthStream.Write(data, 0, data.Length);
                                     action = true;
                                 }
                             }
@@ -442,11 +462,18 @@ namespace Vaser
 
             }
 
-            authStream.Close();
+            Dispose();
+
+            //Console.WriteLine("Connection closed.");
+        }
+
+        internal void Dispose()
+        {
+            _AuthStream.Close();
             _ConnectionStream.Close();
             _SocketTCPClient.Close();
 
-            authStream.Dispose();
+            _AuthStream.Dispose();
             _ConnectionStream.Dispose();
 
             StreamIsConnected = false;
@@ -478,22 +505,10 @@ namespace Vaser
             _ReadStream_Lock.Release();
             _WorkAtStream_Lock.Release();
 
+            if (server != null) server.RemoveFromConnectionList(this);
+
             if (link != null) link.Dispose();
-
-            //Console.WriteLine("Connection closed.");
         }
-
-        /*public void Dispose()
-        {
-            if (ThreadIsRunning)
-            {
-                throw new Exception("Close the connection first before you can dispose this object.");
-            }
-            _WriteStream_Lock.Dispose();
-            _ReadStream_Lock.Dispose();
-            _WorkAtStream_Lock.Dispose();
-            _Settings_ThreadLock.Dispose();
-        }*/
 
         /*public static void EndReadCallback(IAsyncResult ar)
         {

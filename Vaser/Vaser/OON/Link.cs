@@ -16,7 +16,7 @@ namespace Vaser
 
 
         private SemaphoreSlim _Connection_Lock = new SemaphoreSlim(1);
-        public SemaphoreSlim SendData_Lock = new SemaphoreSlim(1);
+        internal SemaphoreSlim SendData_Lock = new SemaphoreSlim(1);
 
         private Connection _Connect;
         private bool _Valid = false;
@@ -76,15 +76,9 @@ namespace Vaser
         private MemoryStream _ms = null;
         public BinaryWriter bw = null;
 
-        public int MajorVersion = 0;
-        public int MinorVersion = 0;
-        public int BuildVersion = 0;
-        public int ProtocolVersion = 0;
-        public string TypeString = "CLIENT";
-        public string LoginName = "anonymous";
-        public string LoginPassword = "anonymous";
-
-
+        /// <summary>
+        /// the remote endpoint IPAddress
+        /// </summary>
         public IPAddress IPv4Address
         {
             get
@@ -97,9 +91,11 @@ namespace Vaser
         {
             _ms = new MemoryStream();
             bw = new BinaryWriter(_ms);
-
         }
 
+        /// <summary>
+        /// Accept the client
+        /// </summary>
         public void Accept()
         {
             Valid = true;
@@ -109,6 +105,9 @@ namespace Vaser
             _Static_ThreadLock.Release();
         }
 
+        /// <summary>
+        /// Close the connection and free all resources
+        /// </summary>
         public void Dispose()
         {
             SendData();
@@ -129,7 +128,7 @@ namespace Vaser
             //Connect.Dispose();
         }
 
-        public void SendData()
+        internal void SendData()
         {
             SendData_Lock.Wait();
             if (Connect != null && _ms != null)

@@ -14,12 +14,12 @@ namespace Vaser
     public class Portal
     {
         //private string classname = string.Empty;
-        public int Cpos = 0;
+        internal int Cpos = 0;
         private static List<Portal> CList = new List<Portal>();
 
 
-        
-        public int counter = 0;
+
+        internal int counter = 0;
 
         MemoryStream big_data_sms = null;
         BinaryWriter big_data_sbw = null;
@@ -28,19 +28,19 @@ namespace Vaser
         BinaryWriter sbw = null;
 
         private List<Packet_Recv> packetList1 = new List<Packet_Recv>();
-        public MemoryStream rms1 = null;
+        internal MemoryStream rms1 = null;
         BinaryWriter rbw1 = null;
-        public BinaryReader rbr1 = null;
+        internal BinaryReader rbr1 = null;
 
         private List<Packet_Recv> packetListTEMP = null;
-        public MemoryStream rmsTEMP = null;
+        internal MemoryStream rmsTEMP = null;
         BinaryWriter rbwTEMP = null;
-        public BinaryReader rbrTEMP = null;
+        internal BinaryReader rbrTEMP = null;
 
         private List<Packet_Recv> packetList2 = new List<Packet_Recv>();
-        public MemoryStream rms2 = null;
+        internal MemoryStream rms2 = null;
         BinaryWriter rbw2 = null;
-        public BinaryReader rbr2 = null;
+        internal BinaryReader rbr2 = null;
 
         public Portal()
         {
@@ -62,15 +62,15 @@ namespace Vaser
             CList.Add(this);
         }
 
-        public static SemaphoreSlim _givePacketToClass_slimlock = new SemaphoreSlim(1);
+        internal static SemaphoreSlim _givePacketToClass_slimlock = new SemaphoreSlim(1);
 
-        public static void lock_givePacketToClass() { _givePacketToClass_slimlock.Wait(); }
-        public static void release_givePacketToClass() { _givePacketToClass_slimlock.Release(); }
+        internal static void lock_givePacketToClass() { _givePacketToClass_slimlock.Wait(); }
+        internal static void release_givePacketToClass() { _givePacketToClass_slimlock.Release(); }
 
-        public static void givePacketToClass(Packet_Recv pak, byte[] data)
+        internal static void givePacketToClass(Packet_Recv pak, byte[] data)
         {
             //Console.WriteLine(pak.PacketSize);
-
+            //_givePacketToClass_slimlock.Wait();
             Portal clas = CList[pak.ClassID];
             clas.packetList1.Add(pak);
             pak.StreamPosition = clas.rms1.Position;
@@ -83,9 +83,13 @@ namespace Vaser
             {
                 pak.PacketSize = 0;
             }
-            
+            //_givePacketToClass_slimlock.Release();
         }
 
+        /// <summary>
+        /// Get all new received data packets.
+        /// </summary>
+        /// <returns>a list of all packets</returns>
         public List<Packet_Recv> getPakets()
         {
             packetList2.Clear();
@@ -116,7 +120,13 @@ namespace Vaser
             return packetList2;
         }
 
-        
+        /// <summary>
+        /// Send data to the client.
+        /// </summary>
+        /// <param name="lnk">the link to the client</param>
+        /// <param name="con">the container you want to send. can be null.</param>
+        /// <param name="ContainerID">manually set</param>
+        /// <param name="ObjectID">manually set</param>
         public void SendContainer(Link lnk, Container con, int ContainerID, int ObjectID)
         {
             if (lnk.bw == null) return;
@@ -160,7 +170,10 @@ namespace Vaser
             counter = 0;
         }
 
-        public static void finialize()
+        /// <summary>
+        /// Flush the databuffer and send all data to the clients/server.
+        /// </summary>
+        public static void Finialize()
         {
             List<Link> tempLinkList = Link.LinkList.ToList<Link>();
             foreach (Link lnk in tempLinkList)

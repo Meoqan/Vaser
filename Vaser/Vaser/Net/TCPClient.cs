@@ -18,6 +18,12 @@ namespace Vaser
         public NetworkStream clientStream;
         Connection con;
 
+        /// <summary>
+        /// Connect to a Vaser server.
+        /// </summary>
+        /// <param name="ip">hostname or IPAddress</param>
+        /// <param name="port">3000</param>
+        /// <returns>Returns null if the client can't connect</returns>
         public Link ConnectClient(string ip, short port)
         {
             try
@@ -48,6 +54,9 @@ namespace Vaser
             }
         }
 
+        /// <summary>
+        /// Closes the connection.
+        /// </summary>
         public void CloseClient()
         {
             try
