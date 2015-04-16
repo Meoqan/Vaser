@@ -325,6 +325,23 @@ namespace Vaser
                 try
                 {
                     _AuthStream.AuthenticateAsServer();
+
+
+                    link.IsAuthenticated = _AuthStream.IsAuthenticated;
+                    link.IsEncrypted = _AuthStream.IsEncrypted;
+                    link.IsMutuallyAuthenticated = _AuthStream.IsMutuallyAuthenticated;
+                    link.IsSigned = _AuthStream.IsSigned;
+                    link.IsServer = _AuthStream.IsServer;
+
+                    // Display properties of the authenticated client.
+                    IIdentity id = _AuthStream.RemoteIdentity;
+                    Console.WriteLine("{0} was authenticated using {1}.",
+                        id.Name,
+                        id.AuthenticationType
+                        );
+                    link.UserName = id.Name;
+
+
                 }
                 catch (AuthenticationException e)
                 {
@@ -345,6 +362,13 @@ namespace Vaser
                 try
                 {
                     _AuthStream.AuthenticateAsClient();
+
+                    link.IsAuthenticated = _AuthStream.IsAuthenticated;
+                    link.IsEncrypted = _AuthStream.IsEncrypted;
+                    link.IsMutuallyAuthenticated = _AuthStream.IsMutuallyAuthenticated;
+                    link.IsSigned = _AuthStream.IsSigned;
+                    link.IsServer = _AuthStream.IsServer;
+
                 }
                 catch (AuthenticationException e)
                 {

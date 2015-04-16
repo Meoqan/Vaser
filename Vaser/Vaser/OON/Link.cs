@@ -14,12 +14,142 @@ namespace Vaser
         private static SemaphoreSlim _Static_ThreadLock = new SemaphoreSlim(1);
         private static List<Link> _LinkList = new List<Link>();
 
-
+        private SemaphoreSlim _Data_Lock = new SemaphoreSlim(1);
         private SemaphoreSlim _Connection_Lock = new SemaphoreSlim(1);
         internal SemaphoreSlim SendData_Lock = new SemaphoreSlim(1);
 
         private Connection _Connect;
         private bool _Valid = false;
+
+        //Kerberos
+        private string _UserName = string.Empty;
+
+        private bool _IsKerberos = false;
+        private bool _IsAuthenticated = false;
+        private bool _IsEncrypted = false;
+        private bool _IsMutuallyAuthenticated = false;
+        private bool _IsSigned = false;
+        private bool _IsServer = false;
+
+
+        public string UserName
+        {
+            get
+            {
+                _Data_Lock.Wait();
+                string ret = _UserName;
+                _Data_Lock.Release();
+                return ret;
+            }
+            set
+            {
+                _Data_Lock.Wait();
+                _UserName = value;
+                _Data_Lock.Release();
+            }
+        }
+
+        public bool IsKerberos
+        {
+            get
+            {
+                _Data_Lock.Wait();
+                bool ret = _IsKerberos;
+                _Data_Lock.Release();
+                return ret;
+            }
+            set
+            {
+                _Data_Lock.Wait();
+                _IsKerberos = value;
+                _Data_Lock.Release();
+            }
+        }
+
+        public bool IsAuthenticated
+        {
+            get
+            {
+                _Data_Lock.Wait();
+                bool ret = _IsAuthenticated;
+                _Data_Lock.Release();
+                return ret;
+            }
+            set
+            {
+                _Data_Lock.Wait();
+                _IsAuthenticated = value;
+                _Data_Lock.Release();
+            }
+        }
+
+        public bool IsEncrypted
+        {
+            get
+            {
+                _Data_Lock.Wait();
+                bool ret = _IsEncrypted;
+                _Data_Lock.Release();
+                return ret;
+            }
+            set
+            {
+                _Data_Lock.Wait();
+                _IsEncrypted = value;
+                _Data_Lock.Release();
+            }
+        }
+
+        public bool IsMutuallyAuthenticated
+        {
+            get
+            {
+                _Data_Lock.Wait();
+                bool ret = _IsMutuallyAuthenticated;
+                _Data_Lock.Release();
+                return ret;
+            }
+            set
+            {
+                _Data_Lock.Wait();
+                _IsMutuallyAuthenticated = value;
+                _Data_Lock.Release();
+            }
+        }
+
+        public bool IsSigned
+        {
+            get
+            {
+                _Data_Lock.Wait();
+                bool ret = _IsSigned;
+                _Data_Lock.Release();
+                return ret;
+            }
+            set
+            {
+                _Data_Lock.Wait();
+                _IsSigned = value;
+                _Data_Lock.Release();
+            }
+        }
+
+        public bool IsServer
+        {
+            get
+            {
+                _Data_Lock.Wait();
+                bool ret = _IsServer;
+                _Data_Lock.Release();
+                return ret;
+            }
+            set
+            {
+                _Data_Lock.Wait();
+                _IsServer = value;
+                _Data_Lock.Release();
+            }
+        }
 
         public static List<Link> LinkList
         {
