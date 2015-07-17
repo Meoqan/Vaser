@@ -32,8 +32,8 @@ namespace test_server_benchmark
             //initialize the server
             Portal system = new Portal();
             //start the server
-            TCPServer Server1 = new TCPServer(System.Net.IPAddress.Any, 3100);
-            TCPServer Server2 = new TCPServer(System.Net.IPAddress.Any, 3101);
+            VaserServer Server1 = new VaserServer(System.Net.IPAddress.Any, 3100, VaserOptions.ModeKerberos);
+            VaserServer Server2 = new VaserServer(System.Net.IPAddress.Any, 3101, VaserOptions.ModeKerberos);
 
             //create connection managing lists
             List<Link> Livinglist = new List<Link>();
@@ -87,15 +87,15 @@ namespace test_server_benchmark
                 //send all bufferd data to the clients
                 Portal.Finialize();
 
-                Thread.Sleep(10);
+                Thread.Sleep(1000);
 
                 //disconnet clients
                 foreach (Link l in Livinglist)
                 {
                     con2.test = "beep.";
                     con2.array = new int[1];
-                    system.SendContainer(l, con2, 1, 1);
-
+                    //system.SendContainer(l, con2, 1, 1);
+                    //Console.WriteLine("beep.");
                     if (!l.Connect.StreamIsConnected) Removelist.Add(l);
                 }
 
@@ -104,10 +104,11 @@ namespace test_server_benchmark
                     Livinglist.Remove(l);
                     //free all resources
                     l.Dispose();
+                    Console.WriteLine("Client disconnected");
                 }
                 Removelist.Clear();
 
-                Thread.Sleep(10);
+                Thread.Sleep(1);
             }
 
             //close the server

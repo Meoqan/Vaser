@@ -39,45 +39,46 @@ namespace test_client_benchmark
             //arbeiten
             while (online)
             {
-                TCPClient Client1 = new TCPClient();
-                TCPClient Client2 = new TCPClient();
 
-                Link lnk1 = Client1.ConnectClient("localhost", 3100);
-                Link lnk2 = Client2.ConnectClient("localhost", 3101);
+                Link lnk1 = VaserClient.ConnectClient("localhost", 3100, VaserOptions.ModeKerberos);
+                Link lnk2 = VaserClient.ConnectClient("localhost", 3101, VaserOptions.ModeKerberos);
 
                 if (lnk1 != null) Console.WriteLine("1: successfully established connection.");
                 if (lnk2 != null) Console.WriteLine("2: successfully established connection.");
 
 
                 //send data
-                con1.test = "INFORMATION! lnk1";
+                con1.test = "Data Send.";
                 // the last 2 digits are manually set [1]
                 system.SendContainer(lnk1, con1, 1, 1);
-                con1.test = "INFORMATION! lnk2";
+                con1.test = "Data Send.";
                 system.SendContainer(lnk2, con1, 1, 1);
 
                 Portal.Finialize();
-                Thread.Sleep(50);
-                //proceed incoming data
-                foreach (Packet_Recv pak in system.getPakets())
-                {
-                    // [1] now you can sort the packet to the right container and object
-                    Console.WriteLine("the packet has the container ID {0} and is for the object ID {1} ", pak.ContainerID, pak.ObjectID);
 
-                    //unpack the packet, true if the decode was successful
-                    if(con1.UnpackDataObject(pak, system))
+                int wait = 2;
+                while (wait == 2)
+                {
+                    //proceed incoming data
+                    foreach (Packet_Recv pak in system.getPakets())
                     {
-                        Console.WriteLine(con1.test);
+                        // [1] now you can sort the packet to the right container and object
+                        Console.WriteLine("the packet has the container ID {0} and is for the object ID {1} ", pak.ContainerID, pak.ObjectID);
+
+                        //unpack the packet, true if the decode was successful
+                        if (con1.UnpackDataObject(pak, system))
+                        {
+                            Console.WriteLine(con1.test);
+                            if (con1.test == "Data Send.") wait=1;
+                        }
                     }
+                    
                 }
-                Portal.Finialize();
-                Thread.Sleep(50);
-                //entfernen
+                Thread.Sleep(1000);
+                //remove
                 lnk1.Dispose();
                 lnk2.Dispose();
 
-                Client1.CloseClient();
-                Client2.CloseClient();
             }
         }
     }

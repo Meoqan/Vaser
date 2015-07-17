@@ -32,6 +32,7 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <Prefer32Bit>false</Prefer32Bit>
+    <PlatformTarget>AnyCPU</PlatformTarget>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
@@ -44,6 +45,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="IDPool.cs" />
+    <Compile Include="Net\VaserOptions.cs" />
     <Compile Include="OON\Command.cs" />
     <Compile Include="OON\Container.cs" />
     <Compile Include="OON\Function.cs" />
@@ -55,8 +57,8 @@
     <Compile Include="OON\Portal.cs" />
     <Compile Include="global\Options.cs" />
     <Compile Include="Net\Connection.cs" />
-    <Compile Include="Net\TCPClient.cs" />
-    <Compile Include="Net\TCPServer.cs" />
+    <Compile Include="Net\VaserClient.cs" />
+    <Compile Include="Net\VaserServer.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup />

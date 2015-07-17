@@ -20,6 +20,8 @@ namespace Vaser
 
         private Connection _Connect;
         private bool _Valid = false;
+        private MemoryStream _ms = null;
+        internal BinaryWriter bw = null;
 
         //Kerberos
         private string _UserName = string.Empty;
@@ -203,8 +205,7 @@ namespace Vaser
         }
         
 
-        private MemoryStream _ms = null;
-        public BinaryWriter bw = null;
+        
 
         /// <summary>
         /// the remote endpoint IPAddress
@@ -255,7 +256,7 @@ namespace Vaser
             if (_ms != null) _ms = null;
             SendData_Lock.Release();
 
-            //Connect.Dispose();
+            Connect.Dispose();
         }
 
         internal void SendData()

@@ -105,7 +105,6 @@ namespace Vaser
         /// </summary>
         /// <param name="pak">the packet</param>
         /// <param name="portal">the portal</param>
-        /// <returns>true if the decode was successful</returns>
         public bool UnpackDataObject(Packet_Recv pak, Portal portal)
         {
             try
