@@ -8,12 +8,12 @@ using System.Reflection;
 using System.Security;
 using System.IO;
 using Vaser.global;
+using System.Diagnostics;
 
 namespace Vaser
 {
     public class Portal
     {
-        //private string classname = string.Empty;
         internal int Cpos = 0;
         private static List<Portal> CList = new List<Portal>();
 
@@ -21,11 +21,11 @@ namespace Vaser
 
         internal int counter = 0;
 
-        MemoryStream big_data_sms = null;
-        BinaryWriter big_data_sbw = null;
+        //MemoryStream big_data_sms = null;
+        //BinaryWriter big_data_sbw = null;
 
-        MemoryStream sms = null;
-        BinaryWriter sbw = null;
+        //MemoryStream sms = null;
+        //BinaryWriter sbw = null;
 
         private List<Packet_Recv> packetList1 = new List<Packet_Recv>();
         internal MemoryStream rms1 = null;
@@ -44,11 +44,11 @@ namespace Vaser
 
         public Portal()
         {
-            big_data_sms = new MemoryStream();
-            big_data_sbw = new BinaryWriter(big_data_sms);
+            //big_data_sms = new MemoryStream();
+            //big_data_sbw = new BinaryWriter(big_data_sms);
 
-            sms = new MemoryStream();
-            sbw = new BinaryWriter(sms);
+            //sms = new MemoryStream();
+            //sbw = new BinaryWriter(sms);
 
             rms1 = new MemoryStream();
             rbw1 = new BinaryWriter(rms1);
@@ -93,8 +93,29 @@ namespace Vaser
         public List<Packet_Recv> getPakets()
         {
             packetList2.Clear();
-            rms2.SetLength(0);
 
+            if (rms2.Length < 10000000)
+            {
+                rms2.SetLength(0);
+                rms2.Flush();
+                rbw2.Flush();
+            }
+            else
+            {
+                rms2.Dispose();
+                rbw2.Dispose();
+                rbr2.Dispose();
+                rms2 = new MemoryStream();
+                rbw2 = new BinaryWriter(rms2);
+                rbr2 = new BinaryReader(rms2);
+                GC.Collect();
+            }
+            //rms2.SetLength(0);
+            //rms2.Flush();
+            //rbw2.Flush();
+
+
+            //switch the packetstream
             packetListTEMP = packetList2;
             rmsTEMP = rms2;
             rbwTEMP = rbw2;
@@ -102,6 +123,7 @@ namespace Vaser
 
 
             _givePacketToClass_slimlock.Wait();
+
             packetList2 = packetList1;
             rms2 = rms1;
             rbw2 = rbw1;
@@ -133,7 +155,7 @@ namespace Vaser
             Packet_Send pak = null;
             if (con != null)
             {  
-                pak = con.PackDataObject();
+                pak = con.PackContainer();
                 //big datapacket dedected
                 if (pak.Counter >= Options.MaximumPacketSize)
                 {
@@ -160,13 +182,16 @@ namespace Vaser
                 if (con != null)
                 {
                     lnk.bw.Write(pak.SendData);
-                    //Console.WriteLine("Protal.SendContainer byte wirtten: " + pak.SendData.Length);
+                    //Debug.WriteLine("Protal.SendContainer byte wirtten: " + pak.SendData.Length);
                 }
             }
             lnk.SendData_Lock.Release();
             
 
-            big_data_sms.SetLength(0);
+            //big_data_sms.SetLength(0);
+            //big_data_sms.Flush();
+            //big_data_sbw.Flush();
+
             counter = 0;
         }
 

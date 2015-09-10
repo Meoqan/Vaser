@@ -7,6 +7,7 @@ using System.IO;
 using System.Reflection;
 using System.Security;
 using Vaser.global;
+using System.Diagnostics;
 
 namespace Vaser
 {
@@ -81,14 +82,29 @@ namespace Vaser
             }
             catch (SecurityException e)
             {
-                Console.WriteLine("Exception : " + e.Message);
+                Debug.WriteLine("Exception : " + e.Message);
             }
         }
 
-        internal Packet_Send PackDataObject()
+        internal Packet_Send PackContainer()
         {
             _SendPacket = new Packet_Send();
-            _ms.SetLength(0);
+
+            if (_ms.Length < 10000000)
+            {
+                _ms.SetLength(0);
+                _ms.Flush();
+                _bw.Flush();
+            }
+            else
+            {
+                _ms.Dispose();
+                _bw.Dispose();
+                _ms = new MemoryStream();
+                _bw = new BinaryWriter(_ms);
+                GC.Collect();
+            }
+            
 
             foreach (racefield field in _FieldList)
             {
@@ -101,11 +117,11 @@ namespace Vaser
         }
 
         /// <summary>
-        /// Unpacks a Packet_Recv data into the variables.
+        /// Unpacks a Packet_Recv data packet.
         /// </summary>
         /// <param name="pak">the packet</param>
         /// <param name="portal">the portal</param>
-        public bool UnpackDataObject(Packet_Recv pak, Portal portal)
+        public bool UnpackContainer(Packet_Recv pak, Portal portal)
         {
             try
             {
@@ -120,7 +136,7 @@ namespace Vaser
                 return true;
             }catch(Exception e)
             {
-                Console.WriteLine("Vaser packet decode error: ClassID> " + pak.ClassID + " ContainerID> " + pak.ContainerID + " ObjectID> " + pak.ObjectID + " Packetsize> " + pak.PacketSize + " StreamPosition> " + pak.StreamPosition + " MEM L> " + portal.rms2.Length + " P> " + portal.rms2.Position);
+                Debug.WriteLine("Vaser packet decode error: ClassID> " + pak.ClassID + " ContainerID> " + pak.ContainerID + " ObjectID> " + pak.ObjectID + " Packetsize> " + pak.PacketSize + " StreamPosition> " + pak.StreamPosition + " MEM L> " + portal.rms2.Length + " P> " + portal.rms2.Position);
                 return false;
             }
         }

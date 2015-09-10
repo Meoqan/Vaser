@@ -16,37 +16,38 @@ namespace test_server
         public class TestContainer : Container
         {
             //only public, nonstatic and standard datatypes can be transmitted
+            //maximum packetsize is 65000 bytes
             public int ID = 1;
             public string test = "test text!";
 
-            public byte[] by = new byte[1000];
+            public byte[] by = new byte[10000];
         }
 
         static void Main(string[] args)
         {
 
             Console.WriteLine("Welcome to the Vaser testengine");
-            Console.WriteLine("Prepareing server...");
+            Console.WriteLine("Prepareing server");
             Console.WriteLine("");
 
-            Console.WriteLine("Creating container: TestContainer...");
+            Console.WriteLine("Creating container: TestContainer");
             // create new container
             TestContainer con1 = new TestContainer();
 
             //create connection managing lists
-            List<Link> Livinglist = new List<Link>();
-            List<Link> Removelist = new List<Link>();
+            
             Link test1 = null;
 
 
             //initialize the server
-            Console.WriteLine("Creating portal: system...");
+            Console.WriteLine("Creating portal: system");
             Portal system = new Portal();
 
 
             //Create a TestCert in CMD: makecert -sr LocalMachine -ss root -r -n "CN=localhost" -sky exchange -sk 123456
             // Do not use in Production | do not use localhost -> use your machinename!
 
+            Console.WriteLine("Import Test Cert");
             //Import Test Cert
             X509Certificate2 cert = new X509Certificate2();
 
@@ -57,21 +58,17 @@ namespace test_server
 
             if (certificates.Count == 0)
             {
-                Console.WriteLine("Server certificate not found...");
-                
+                Console.WriteLine("Server certificate not found");
+                Console.ReadKey();
+                return;
             }
             else
             {
+                Console.WriteLine("Test Cert was found");
                 cert = certificates[0];
             }
-            //Console.ReadKey();
-            //Import Test Cert
-            
-            //cert.Import("localhost.pfx");
-            
+
             // Get the value.
-            //Console.WriteLine(cert.GetPublicKey());
-            //Console.WriteLine(cert.PrivateKey);
             string resultsTrue = cert.ToString(true);
             // Display the value to the console.
             Console.WriteLine(resultsTrue);
@@ -111,7 +108,6 @@ namespace test_server
                             test1 = lnk1;
                             Console.WriteLine("New client connected: remote IPAdress {0} , remote Identity: {1}", lnk1.IPv4Address.ToString(), lnk1.UserName);
                             lnk1.Accept();
-                            Livinglist.Add(lnk1);
 
                             Console.WriteLine("Reading metadata from Link:");
                             Console.WriteLine("lnk1.Connect.StreamIsConnected is {0}", lnk1.Connect.StreamIsConnected.ToString());
@@ -141,7 +137,7 @@ namespace test_server
                             //Console.WriteLine("the packet has the container ID {0} and is for the object ID {1} ", pak.ContainerID, pak.ObjectID);
 
                             //unpack the packet, true if the decode was successful
-                            if (con1.UnpackDataObject(pak, system))
+                            if (con1.UnpackContainer(pak, system))
                             {
                                 if (watch.IsRunning == false) watch.Start();
 
@@ -191,7 +187,7 @@ namespace test_server
                         break;
                     case 4:
                         test1.Dispose();
-                        Console.WriteLine("Closed...");
+                        Console.WriteLine("Closed");
                         testmode = -1;
                         break;
                 }
@@ -203,12 +199,12 @@ namespace test_server
             }
 
             //close Server
-            Console.WriteLine("Close Server....");
+            Console.WriteLine("Close Server");
             Server1.Stop();
+            
 
 
-
-            Console.WriteLine("Test ended... press any key...");
+            Console.WriteLine("Test ended. Press any key...");
             Console.ReadKey();
         }
     }

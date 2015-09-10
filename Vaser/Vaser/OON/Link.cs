@@ -266,9 +266,29 @@ namespace Vaser
             {
                 if (_ms.Length > 0)
                 {
-                    //Console.WriteLine("Link.SendData byte wirtten: " + _ms.Length);
+                    //Debug.WriteLine("Link.SendData byte wirtten: " + _ms.Length);
                     Connect.SendData(_ms.ToArray());
-                    _ms.SetLength(0);
+
+
+
+                    //_ms.SetLength(0);
+                    //_ms.Flush();
+                    //bw.Flush();
+
+                    if (_ms.Length < 10000000)
+                    {
+                        _ms.SetLength(0);
+                        _ms.Flush();
+                        bw.Flush();
+                    }
+                    else
+                    {
+                        _ms.Dispose();
+                        bw.Dispose();
+                        _ms = new MemoryStream();
+                        bw = new BinaryWriter(_ms);
+                        GC.Collect();
+                    }
                 }
             }
             SendData_Lock.Release();

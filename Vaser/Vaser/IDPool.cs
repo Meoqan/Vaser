@@ -8,25 +8,40 @@ namespace Vaser
 {
     public class IDPool
     {
-        object threadlock = new object();
-        int maxIDs = 0;
+        private object threadlock = new object();
+        private int _MaxIDs = 0;
 
-        List<int> freeIDList = new List<int>();
-        List<int> usedIDList = new List<int>();
+        private List<int> freeIDList = new List<int>();
+        private List<int> usedIDList = new List<int>();
 
-        public IDPool(int max_IDs)
+
+        /// <summary>
+        /// Creates a new pool of IDs
+        /// </summary>
+        /// <param name="MaxIDs"></param>
+        public IDPool(int MaxIDs)
         {
-            maxIDs = max_IDs;
-            for (int x = 1; x <= maxIDs; x++)
+            if (MaxIDs < 0) throw new Exception("MaxIDs must be positive");
+            lock (threadlock)
             {
-                freeIDList.Add(x);
+                _MaxIDs = MaxIDs;
+                for (int x = 1; x <= _MaxIDs; x++)
+                {
+                    freeIDList.Add(x);
+                }
             }
         }
 
-        public int get_free_ID()
+        /// <summary>
+        /// Returns a free ID from the pool
+        /// </summary>
+        /// <returns>ID</returns>
+        public int GetFreeID()
         {
             lock(threadlock)
             {
+                if(freeIDList.Count == 0) throw new Exception("free pool is empty");
+
                 int id = freeIDList[0];
                 freeIDList.Remove(id);
                 usedIDList.Add(id);
@@ -35,22 +50,35 @@ namespace Vaser
             
         }
 
-        public int register_free_ID(int id)
+        /// <summary>
+        /// Removes the ID from the pool and marks as used
+        /// </summary>
+        /// <param name="id">ID</param>
+        /// <returns>ID</returns>
+        public int RegisterFreeID(int id)
         {
+            if (id < 0) throw new Exception("ID must be positive");
+            
             lock (threadlock)
             {
-                freeIDList.Remove(id);
+                if (freeIDList.Contains(id)) freeIDList.Remove(id);
                 usedIDList.Add(id);
                 return id;
             }
 
         }
 
-        public void dispose_ID(int id)
+        /// <summary>
+        /// Frees the used id back to the pool
+        /// </summary>
+        /// <param name="id">ID</param>
+        public void DisposeID(int id)
         {
+            if (id < 0) throw new Exception("ID must be positive");
+
             lock (threadlock)
             {
-                usedIDList.Remove(id);
+                if(usedIDList.Contains(id)) usedIDList.Remove(id);
                 freeIDList.Add(id);
             }
         }

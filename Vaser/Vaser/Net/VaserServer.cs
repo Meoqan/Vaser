@@ -8,6 +8,7 @@ using System.Net.Sockets;
 using System.Threading;
 using Vaser.global;
 using System.Security.Cryptography.X509Certificates;
+using System.Diagnostics;
 
 namespace Vaser
 {
@@ -122,12 +123,18 @@ namespace Vaser
         {
             if (Mode == VaserOptions.ModeSSL) throw new Exception("Missing X509Certificate2");
 
-            _ThreadLock.Wait();
-            _ServerOption = Mode;
-            _TCPListener = new TcpListener(LocalAddress, Port);
-            _ListenThread = new Thread(new ThreadStart(ListenForClients));
-            _ListenThread.Start();
-            _ThreadLock.Release();
+            try
+            {
+                _ThreadLock.Wait();
+                _ServerOption = Mode;
+                _TCPListener = new TcpListener(LocalAddress, Port);
+                _ListenThread = new Thread(new ThreadStart(ListenForClients));
+                _ListenThread.Start();
+                _ThreadLock.Release();
+            }catch(Exception ex)
+            {
+                throw ex;
+            }
         }
 
         /// <summary>
@@ -141,13 +148,20 @@ namespace Vaser
         {
             if (Mode == VaserOptions.ModeSSL && Cert == null) throw new Exception("Missing X509Certificate2 in VaserServer(IPAddress LocalAddress, int Port, VaserOptions Mode, X509Certificate Cert)");
 
-            _ThreadLock.Wait();
-            _Certificate = Cert;
-            _ServerOption = Mode;
-            _TCPListener = new TcpListener(LocalAddress, Port);
-            _ListenThread = new Thread(new ThreadStart(ListenForClients));
-            _ListenThread.Start();
-            _ThreadLock.Release();
+            try
+            {
+                _ThreadLock.Wait();
+                _Certificate = Cert;
+                _ServerOption = Mode;
+                _TCPListener = new TcpListener(LocalAddress, Port);
+                _ListenThread = new Thread(new ThreadStart(ListenForClients));
+                _ListenThread.Start();
+                _ThreadLock.Release();
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
         }
 
 
@@ -157,15 +171,20 @@ namespace Vaser
 
             while (ServerOnline && Options.Operating)
             {
-                while (_TCPListener.Pending())
+                try
                 {
-                    
-                    TcpClient Client = this._TCPListener.AcceptTcpClient();
+                    while (_TCPListener.Pending())
+                    {
 
-                    ThreadPool.QueueUserWorkItem(QueueNewConnection, Client);
+                        TcpClient Client = _TCPListener.AcceptTcpClient();
 
+                        ThreadPool.QueueUserWorkItem(QueueNewConnection, Client);
+
+                    }
+                }catch(Exception e)
+                {
+                    Debug.WriteLine("ERROR in VaserServer.ListenForClients() > " + e.ToString());
                 }
-
                 Thread.Sleep(100);
             }
 
@@ -181,15 +200,23 @@ namespace Vaser
 
         internal void QueueNewConnection(object Client)
         {
-            Connection con = new Connection((TcpClient)Client, true, _ServerOption, _Certificate, this);
+            try
+            {
+                Connection con = new Connection((TcpClient)Client, true, _ServerOption, _Certificate, null, null, this);
 
-            _ConnectionList_ThreadLock.Wait();
-            _ConnectionList.Add(con);
-            _ConnectionList_ThreadLock.Release();
+                _ConnectionList_ThreadLock.Wait();
+                _ConnectionList.Add(con);
+                _ConnectionList_ThreadLock.Release();
+            }
+            catch (Exception e)
+            {
+                Debug.WriteLine("ERROR in VaserServer.QueueNewConnection(object Client) > " + e.ToString());
+            }
         }
 
         internal void RemoveFromConnectionList(Connection con)
         {
+            if (con == null) return;
             _ConnectionList_ThreadLock.Wait();
             _ConnectionList.Remove(con);
             _ConnectionList_ThreadLock.Release();

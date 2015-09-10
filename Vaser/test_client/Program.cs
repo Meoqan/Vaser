@@ -22,7 +22,6 @@ namespace test_client
 
         static void Main(string[] args)
         {
-            //ServicePointManager.ServerCertificateValidationCallback = delegate { return true; };
 
             // create new container
             TestContainer con1 = new TestContainer();
@@ -36,7 +35,7 @@ namespace test_client
             // Do not use in Production | do not use localhost -> use your machinename!
 
             //Import Test Cert from local store
-            X509Certificate2 cert = new X509Certificate2();
+            X509Certificate2Collection cCollection = new X509Certificate2Collection();
 
             X509Store store = new X509Store(StoreName.Root, StoreLocation.LocalMachine);
             store.Open(OpenFlags.ReadOnly);
@@ -46,28 +45,27 @@ namespace test_client
             if (certificates.Count == 0)
             {
                 Console.WriteLine("Server certificate not found...");
-
+                Console.ReadKey();
+                return;
             }
             else
             {
-                cert = certificates[0];
+                cCollection.Add(certificates[0]); 
             }
             // Get the value.
-            string resultsTrue = cert.ToString(true);
+            string resultsTrue = cCollection[0].ToString(true);
             // Display the value to the console.
             Console.WriteLine(resultsTrue);
             // Get the value.
-            string resultsFalse = cert.ToString(false);
+            string resultsFalse = cCollection[0].ToString(false);
             // Display the value to the console.
             Console.WriteLine(resultsFalse);
 
-
-            /*VaserClient Client1 = new VaserClient();
-
-            Link lnk1 = Client1.ConnectClient("localhost", 3100, VaserOptions.ModeSSL, cert);*/
+            
+            
 
 
-            Link lnk1 = VaserClient.ConnectClient("localhost", 3100, VaserOptions.ModeSSL, cert);
+            Link lnk1 = VaserClient.ConnectClient("localhost", 3100, VaserOptions.ModeSSL, cCollection, "localhost");
 
             if (lnk1 != null) Console.WriteLine("1: successfully established connection.");
 
@@ -84,7 +82,7 @@ namespace test_client
                     // [1] now you can sort the packet to the right container and object
 
                     //unpack the packet, true if the decode was successful
-                    if (con1.UnpackDataObject(pak, system))
+                    if (con1.UnpackContainer(pak, system))
                     {
                         
                         system.SendContainer(pak.link, con1, 1, 1);

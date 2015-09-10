@@ -12,6 +12,8 @@ using Vaser.global;
 using System.Security.Authentication;
 using System.Security.Principal;
 using System.Security.Cryptography.X509Certificates;
+using System.Diagnostics;
+using System.Timers;
 
 namespace Vaser
 {
@@ -19,6 +21,7 @@ namespace Vaser
     {
 
         private SemaphoreSlim _Settings_ThreadLock = new SemaphoreSlim(1);
+        private object _DisposeLock = new object();
         private bool _ThreadIsRunning = true;
         private bool _StreamIsConnected = true;
         private bool _IsServer = false;
@@ -61,9 +64,13 @@ namespace Vaser
 
         private VaserOptions _Mode = null;
         private X509Certificate2 _Cert = null;
+        private X509Certificate2Collection _CertCol = null;
+        private string _targetHostname = string.Empty;
 
         private bool _IsInQueue = false;
         private bool _IsInSendQueue = false;
+
+        private System.Timers.Timer _aTimer;
 
         /// <summary>
         /// the IPAdress of the remote end point
@@ -153,34 +160,6 @@ namespace Vaser
                 _Settings_ThreadLock.Wait();
                 bool ret = _StreamIsConnected;
                 _Settings_ThreadLock.Release();
-                if (BootupDone)
-                {
-                    try
-                    {
-                        if (_SocketTCPClient != null && _SocketTCPClient.Client != null)
-                        {
-                            //ret = !(_SocketTCPClient.Available == 0 && _SocketTCPClient.Client.Poll(1, SelectMode.SelectRead));
-                            if (_SocketTCPClient.Client.Poll(0, SelectMode.SelectRead))
-                            {
-                                byte[] buff = new byte[1];
-                                if (_SocketTCPClient.Client.Receive(buff, SocketFlags.Peek) == 0)
-                                {
-                                    // Client disconnected
-                                    ret = false;
-                                }
-                            }
-                        }
-                        else
-                        {
-                            //ret = false;
-                        }
-                    }
-                    catch (Exception e)
-                    {
-                        //Console.WriteLine(e.ToString());
-                        ret = false;
-                    }
-                }
                 return ret;
             }
             set
@@ -228,7 +207,7 @@ namespace Vaser
         /// <summary>
         /// Creates a new connection for processing data
         /// </summary>
-        public Connection(TcpClient client, bool IsServer, VaserOptions Mode, X509Certificate2 Cert = null, VaserServer srv = null)
+        public Connection(TcpClient client, bool IsServer, VaserOptions Mode, X509Certificate2 Cert = null, X509Certificate2Collection cCollection = null, string targetHostname = null, VaserServer srv = null)
         {
             _IsServer = IsServer;
 
@@ -251,9 +230,15 @@ namespace Vaser
             _WriteStream_Lock.Release();
             _ReadStream_Lock.Release();
 
+            _aTimer = new System.Timers.Timer(1000);
+            _aTimer.Elapsed += new ElapsedEventHandler(OnTimedEvent);
+            _aTimer.Enabled = true;
+
             _Mode = Mode;
 
             _Cert = Cert;
+            _CertCol = cCollection;
+            _targetHostname = targetHostname;
 
             _SocketTCPClient = client;
 
@@ -270,16 +255,16 @@ namespace Vaser
             link.Connect = this;
 
             HandleClientComm();
-
-            //_ClientThread = new Thread(HandleClientComm);
-            //_ClientThread.Start();
-
-            //_ProcessingDecryptThread = new Thread(StreamDecrypt);
-            //_ProcessingDecryptThread.Start();
-
         }
 
-        
+        private byte[] _timeoutdata = BitConverter.GetBytes((int)(-1));
+
+        private void OnTimedEvent(object source, ElapsedEventArgs e)
+        {
+            //Debug.WriteLine("Send keep alive packet {0}", e.SignalTime);
+            SendData(_timeoutdata);
+        }
+
         internal bool IsInQueue
         {
             get
@@ -346,13 +331,15 @@ namespace Vaser
         /// <param name="Data"></param>
         internal void SendData(byte[] Data)
         {
-            _WriteStream_Lock.Wait();
+            
             if (StreamIsConnected && _sbw1 != null)
             {
+                _WriteStream_Lock.Wait();
                 _sbw1.Write(Data);
+                QueueSend();
+                _WriteStream_Lock.Release();
             }
-            QueueSend();
-            _WriteStream_Lock.Release();
+            
 
             
         }
@@ -360,7 +347,7 @@ namespace Vaser
         
 
         /// <summary>
-        /// Stop the connection
+        /// Stops the connection
         /// </summary>
         public void Stop()
         {
@@ -396,7 +383,24 @@ namespace Vaser
                     if (_rms1.Length > 0) action1 = true;
 
                     _rbw2.Write(_rms1.ToArray());
-                    _rms1.SetLength(0);
+
+                    if (_rms1.Length < 10000000)
+                    {
+                        _rms1.SetLength(0);
+                        _rms1.Flush();
+                        _rbw1.Flush();
+                    }
+                    else
+                    {
+                        _rms1.Dispose();
+                        _rbw1.Dispose();
+                        _rbr1.Dispose();
+                        _rms1 = new MemoryStream();
+                        _rbw1 = new BinaryWriter(_rms1);
+                        _rbr1 = new BinaryReader(_rms1);
+                        GC.Collect();
+                    }
+
                     IsInQueue = false;
                     _ReadStream_Lock.Release();
                     _rms2.Position = 0;
@@ -416,12 +420,22 @@ namespace Vaser
                                     mode = 1;
                                     action2 = true;
 
-                                    // if the Packetsize is beond the limits, terminate the connection. maybe a Hacking attempt?
-                                    if (size > Options.MaximumPacketSize || size < Options.PacketHeadSize)
+                                    // recive keep alive packet
+                                    if (size == -1)
                                     {
-                                        this.Stop();
-                                        mode = 100;
-                                        break;
+                                        mode = 0;
+                                        action2 = true;
+                                    }
+                                    else
+                                    {
+
+                                        // if the Packetsize is beond the limits, terminate the connection. maybe a Hacking attempt?
+                                        if (size > Options.MaximumPacketSize || size < Options.PacketHeadSize)
+                                        {
+                                            this.Stop();
+                                            mode = 100;
+                                            break;
+                                        }
                                     }
                                 }
                                 break;
@@ -448,7 +462,28 @@ namespace Vaser
 
 
                     byte[] lastbytes = _rbr2.ReadBytes((int)(_rms2.Length - _rms2.Position));
-                    _rms2.SetLength(0);
+
+                    //_rms2.SetLength(0);
+                    //_rms2.Flush();
+                    //_rbw2.Flush();
+
+                    if (_rms2.Length < 10000000)
+                    {
+                        _rms2.SetLength(0);
+                        _rms2.Flush();
+                        _rbw2.Flush();
+                    }
+                    else
+                    {
+                        _rms2.Dispose();
+                        _rbw2.Dispose();
+                        _rbr2.Dispose();
+                        _rms2 = new MemoryStream();
+                        _rbw2 = new BinaryWriter(_rms1);
+                        _rbr2 = new BinaryReader(_rms1);
+                        GC.Collect();
+                    }
+
                     _rbw2.Write(lastbytes);
 
                 }
@@ -458,7 +493,25 @@ namespace Vaser
             }
             catch (Exception e)
             {
-                //Console.WriteLine(e.ToString());
+                try
+                {
+                    _WorkAtStream_Lock.Release();
+                }
+                catch (Exception exl)
+                { }
+                try
+                {
+                    _ReadStream_Lock.Release();
+                }
+                catch (Exception exl)
+                { }
+                try
+                {
+                    Portal.release_givePacketToClass();
+                }
+                catch (Exception exl)
+                { }
+                Debug.WriteLine(e.ToString());
                 //Dispose();
                 ThreadIsRunning = false;
             }
@@ -466,7 +519,9 @@ namespace Vaser
         }
 
     
-
+        /// <summary>
+        /// Handles the connection process of clients
+        /// </summary>
         private void HandleClientComm()
         {
             
@@ -501,10 +556,10 @@ namespace Vaser
 
                         // Display properties of the authenticated client.
                         IIdentity id = _AuthStream.RemoteIdentity;
-                        /*Console.WriteLine("{0} was authenticated using {1}.",
+                        Debug.WriteLine("{0} was authenticated using {1}.",
                             id.Name,
                             id.AuthenticationType
-                            );*/
+                            );
                         link.UserName = id.Name;
                     }
 
@@ -512,20 +567,21 @@ namespace Vaser
                     if (_Mode == VaserOptions.ModeSSL)
                     {
                         _sslStream.AuthenticateAsServer(_Cert,false,SslProtocols.Tls12,false);
-
+                        link.IsEncrypted = true;
+                        link.IsServer = true;
                     }
 
                     server.AddNewLink(link);
                 }
                 catch (AuthenticationException e)
                 {
-                    Console.WriteLine("Authentication failed. " + e.ToString());
+                    Debug.WriteLine("Authentication failed. " + e.ToString());
                     Dispose();
                     return;
                 }
                 catch (Exception e)
                 {
-                    Console.WriteLine("Authentication failed. " + e.ToString());
+                    Debug.WriteLine("Authentication failed. " + e.ToString());
                     Dispose();
                     return;
                 }
@@ -544,33 +600,37 @@ namespace Vaser
                         link.IsMutuallyAuthenticated = _AuthStream.IsMutuallyAuthenticated;
                         link.IsSigned = _AuthStream.IsSigned;
                         link.IsServer = _AuthStream.IsServer;
+
+                        IIdentity id = _AuthStream.RemoteIdentity;
+                        Debug.WriteLine("{0} was authenticated using {1}.",
+                            id.Name,
+                            id.AuthenticationType
+                            );
                     }
 
                     if (_Mode == VaserOptions.ModeSSL)
                     {
-                        X509Certificate2Collection cCollection = new X509Certificate2Collection();
-                        cCollection.Add(_Cert);
-                        _sslStream.AuthenticateAsClient("localhost",cCollection, SslProtocols.Tls12,false);
+                        _sslStream.AuthenticateAsClient(_targetHostname,_CertCol, SslProtocols.Tls12,false);
+                        link.IsEncrypted = true;
                     }
                     
 
                 }
                 catch (AuthenticationException e)
                 {
-                    Console.WriteLine("Authentication failed. " + e.ToString());
+                    Debug.WriteLine("Authentication failed. " + e.ToString());
                     Dispose();
                     return;
                 }
                 catch (Exception e)
                 {
-                    Console.WriteLine("Authentication failed. " + e.ToString());
+                    Debug.WriteLine("Authentication failed. " + e.ToString());
                     Dispose();
                     return;
                 }
             }
 
-
-            //AuthenticatedStreamReporter.DisplayProperties(authStream);
+            
             // encryption END
 
             Receive();
@@ -583,89 +643,96 @@ namespace Vaser
             // Complete the disconnect request.
             Socket client = (Socket)ar.AsyncState;
             client.EndDisconnect(ar);
-            Console.WriteLine("Disconnected.");
+            Debug.WriteLine("Disconnected.");
 
         }
 
         internal void Dispose()
         {
-            if (Disposed)
+            lock(_DisposeLock)
             {
-                return;
+                Debug.WriteLine("Link.Dispose called");
+                if (Disposed)
+                {
+                    Debug.WriteLine("Link.Dispose abort");
+                    return;
+                }
+                else
+                {
+                    Disposed = true;
+                }
+                if (_SocketTCPClient != null && _SocketTCPClient.Connected)
+                {
+                    try
+                    {
+                        _SocketTCPClient.Client.Shutdown(SocketShutdown.Both);
+                    }
+                    catch (Exception exs)
+                    {
+                        Debug.WriteLine(exs.ToString());
+                    }
+
+                }
+                if (_AuthStream != null) _AuthStream.Close();
+                if (_sslStream != null) _sslStream.Close();
+                _ConnectionStream.Close();
+                _SocketTCPClient.Close();
+
+                if (_AuthStream != null) _AuthStream.Dispose();
+                if (_sslStream != null) _sslStream.Dispose();
+                _ConnectionStream.Dispose();
+
+                StreamIsConnected = false;
+                ThreadIsRunning = false;
+
+                _WorkAtStream_Lock.Wait();
+                _WriteStream_Lock.Wait();
+                _ReadStream_Lock.Wait();
+
+                try
+                {
+                    //_buff = null;
+
+                    _rbr1.Dispose();
+                    _rbr2.Dispose();
+
+                    _sbw1.Dispose();
+                    _sbw2.Dispose();
+                    _rbw1.Dispose();
+                    _rbw2.Dispose();
+
+                    _sms1.Dispose();
+                    _sms2.Dispose();
+                    _rms1.Dispose();
+                    _rms2.Dispose();
+
+                    _sms1 = null;
+                    _sms2 = null;
+                    _rms1 = null;
+                    _rms2 = null;
+
+                    _aTimer.Stop();
+                    _aTimer.Dispose();
+                }
+                catch (Exception e)
+                {
+                    //Console.WriteLine(e.ToString());
+
+                }
+                _WriteStream_Lock.Release();
+                _ReadStream_Lock.Release();
+                _WorkAtStream_Lock.Release();
+
+                if (server != null) server.RemoveFromConnectionList(this);
+
+                if (link != null) link.Dispose();
+
+                GC.Collect();
+
+                Debug.WriteLine("Link.Dispose finished");
             }
-            else
-            {
-                Disposed = true;
-            }
-            if (_SocketTCPClient != null && _SocketTCPClient.Connected)
-            {
-                _SocketTCPClient.Client.Shutdown(SocketShutdown.Both);
-
-            }
-            if(_AuthStream != null) _AuthStream.Close();
-            if (_sslStream != null) _sslStream.Close();
-            _ConnectionStream.Close();
-            _SocketTCPClient.Close();
-
-            if (_AuthStream != null) _AuthStream.Dispose();
-            if (_sslStream != null) _sslStream.Dispose();
-            _ConnectionStream.Dispose();
-
-            StreamIsConnected = false;
-            ThreadIsRunning = false;
-
-            _WorkAtStream_Lock.Wait();
-            _WriteStream_Lock.Wait();
-            _ReadStream_Lock.Wait();
-
-            try
-            {
-                //_buff = null;
-
-                _rbr1.Dispose();
-                _rbr2.Dispose();
-
-                _sbw1.Dispose();
-                _sbw2.Dispose();
-                _rbw1.Dispose();
-                _rbw2.Dispose();
-
-                _sms1.Dispose();
-                _sms2.Dispose();
-                _rms1.Dispose();
-                _rms2.Dispose();
-
-                _sms1 = null;
-                _sms2 = null;
-                _rms1 = null;
-                _rms2 = null;
-            }
-            catch (Exception e)
-            {
-                //Console.WriteLine(e.ToString());
-
-            }
-            _WriteStream_Lock.Release();
-            _ReadStream_Lock.Release();
-            _WorkAtStream_Lock.Release();
-
-            if (server != null) server.RemoveFromConnectionList(this);
-
-            if (link != null) link.Dispose();
-            //link = null;
         }
-
-        // ManualResetEvent instances signal completion.
-        /*private static ManualResetEvent connectDone =
-            new ManualResetEvent(false);
-        private static ManualResetEvent sendDone =
-            new ManualResetEvent(false);
-        private static ManualResetEvent receiveDone =
-            new ManualResetEvent(false);
-
-        // The response from the remote device.
-        private static String response = String.Empty;*/
-
+        
 
         private void Receive()
         {
@@ -679,7 +746,7 @@ namespace Vaser
             }
             catch (Exception e)
             {
-                //Console.WriteLine(e.ToString());
+                Debug.WriteLine(e.ToString());
                 Dispose();
             }
         }
@@ -715,7 +782,13 @@ namespace Vaser
             }
             catch (Exception e)
             {
-                //Console.WriteLine(e.ToString());
+                try
+                {
+                    _ReadStream_Lock.Release();
+                }
+                catch (Exception exl)
+                { }
+                Debug.WriteLine(e.ToString());
                 Dispose();
             }
         }
@@ -747,7 +820,24 @@ namespace Vaser
                 _WriteStream_Lock.Release();
 
                 byteData = _sms2.ToArray();
-                _sms2.SetLength(0);
+
+                if (_sms2.Length < 10000000)
+                {
+                    _sms2.SetLength(0);
+                    _sms2.Flush();
+                    _sbw2.Flush();
+                }
+                else
+                {
+                    _sms2.Dispose();
+                    _sbw2.Dispose();
+                    _sms2 = new MemoryStream();
+                    _sbw2 = new BinaryWriter(_sms2);
+                    GC.Collect();
+                }
+                
+
+
                 //} while (byteData.Length == 0);
 
                 if (_AuthStream != null) _AuthStream.BeginWrite(byteData, 0, byteData.Length, new AsyncCallback(SendCallback), _AuthStream);
@@ -755,7 +845,13 @@ namespace Vaser
             }
             catch (Exception e)
             {
-                //Console.WriteLine(e.ToString());
+                try
+                {
+                    _WriteStream_Lock.Release();
+                }
+                catch (Exception exl)
+                { }
+                Debug.WriteLine(e.ToString());
                 Dispose();
             }
         }
@@ -794,7 +890,8 @@ namespace Vaser
                 //{
                 byteData = _sms2.ToArray();
                 _sms2.SetLength(0);
-
+                _sms2.Flush();
+                _sbw2.Flush();
                 //} while (byteData.Length == 0);
 
                 if (_AuthStream != null) _AuthStream.BeginWrite(byteData, 0, byteData.Length, new AsyncCallback(SendCallback), _AuthStream);
@@ -802,22 +899,16 @@ namespace Vaser
             }
             catch (Exception e)
             {
-                //Console.WriteLine(e.ToString());
+                try
+                {
+                    _WriteStream_Lock.Release();
+                }
+                catch (Exception exl)
+                { }
+                Debug.WriteLine(e.ToString());
                 Dispose();
             }
         }
     }
-
-    /*public class AuthenticatedStreamReporter
-    {
-        public static void DisplayProperties(AuthenticatedStream stream)
-        {
-            Console.WriteLine("IsAuthenticated: {0}", stream.IsAuthenticated);
-            Console.WriteLine("IsMutuallyAuthenticated: {0}", stream.IsMutuallyAuthenticated);
-            Console.WriteLine("IsEncrypted: {0}", stream.IsEncrypted);
-            Console.WriteLine("IsSigned: {0}", stream.IsSigned);
-            Console.WriteLine("IsServer: {0}", stream.IsServer);
-        }
-    }*/
-
+    
 }

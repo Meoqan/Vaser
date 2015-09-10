@@ -66,7 +66,7 @@ namespace test_client_benchmark
                         Console.WriteLine("the packet has the container ID {0} and is for the object ID {1} ", pak.ContainerID, pak.ObjectID);
 
                         //unpack the packet, true if the decode was successful
-                        if (con1.UnpackDataObject(pak, system))
+                        if (con1.UnpackContainer(pak, system))
                         {
                             Console.WriteLine(con1.test);
                             if (con1.test == "Data Send.") wait=1;
@@ -74,7 +74,7 @@ namespace test_client_benchmark
                     }
                     
                 }
-                Thread.Sleep(1000);
+                Thread.Sleep(10);
                 //remove
                 lnk1.Dispose();
                 lnk2.Dispose();
