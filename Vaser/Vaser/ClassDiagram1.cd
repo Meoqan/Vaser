@@ -1,0 +1,116 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ClassDiagram MajorVersion="1" MinorVersion="1">
+  <Class Name="Vaser.global.Options" Collapsed="true">
+    <Position X="0.5" Y="2.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAQACABAAgAAAAAAAAAAAAAAAAAIgAAAAAA=</HashCode>
+      <FileName>global\Options.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Vaser.IDPool" Collapsed="true">
+    <Position X="0.5" Y="1.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AQAAAACAAAAAAQBAAAAAAEAEAABAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>IDPool.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Vaser.Connection" Collapsed="true">
+    <Position X="2.25" Y="0.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>JkCUCMwYCeYAAQDg9MmgiwAIEQU4AABYICAAAECiAOI=</HashCode>
+      <FileName>Net\Connection.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Vaser.VaserClient" Collapsed="true">
+    <Position X="2.25" Y="3.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Net\VaserClient.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Vaser.VaserOptions" Collapsed="true">
+    <Position X="4" Y="3.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAACAAAAAQAAAAAAAAAAAAAAAAAAAgAA=</HashCode>
+      <FileName>Net\VaserOptions.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Vaser.VaserServer" Collapsed="true">
+    <Position X="5.75" Y="3.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AEAKAIAAgAAAAAAAgAEAAABQAAQCBAAAIAAAAEAICEE=</HashCode>
+      <FileName>Net\VaserServer.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Vaser.Command" Collapsed="true">
+    <Position X="0.5" Y="0.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>OON\Command.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Vaser.Container" Collapsed="true">
+    <Position X="4" Y="0.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>YKAoxkZGCKFAWGhLGhACoAACFDjzIWIhAsqTVawAAcA=</HashCode>
+      <FileName>OON\Container.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Vaser.Function" Collapsed="true">
+    <Position X="5.75" Y="0.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>OON\Function.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Vaser.Link" Collapsed="true">
+    <Position X="2.25" Y="1.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>YIACYAAQBKQAECACACoAAoAggAECAAAAAQEBBAACAAA=</HashCode>
+      <FileName>OON\Link.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Vaser.NetVector2" Collapsed="true">
+    <Position X="4" Y="1.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAA=</HashCode>
+      <FileName>OON\NetVector2.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Vaser.NetVector3" Collapsed="true">
+    <Position X="5.75" Y="1.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAA=</HashCode>
+      <FileName>OON\NetVector3.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Vaser.Packet_Recv" Collapsed="true">
+    <Position X="2.25" Y="2.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>ACAAAAAAAECAAAAAQAAAAAAAAAAEAAEAAAAAAAAAAEA=</HashCode>
+      <FileName>OON\Packet_Recv.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Vaser.Packet_Send" Collapsed="true">
+    <Position X="4" Y="2.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAIAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>OON\Packet_Send.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Vaser.Portal" Collapsed="true">
+    <Position X="5.75" Y="2.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>gAMAAAABAAAAEAAAAQARAAgADAAAAAEACAQAVQABAAA=</HashCode>
+      <FileName>OON\Portal.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Vaser.OON.PortalCollection" Collapsed="true">
+    <Position X="0.5" Y="3.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAIAAAAAAAAAAAAAAAAAAAgAAAAAAAAQAAAAAAAAAAA=</HashCode>
+      <FileName>OON\PortalCollection.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Font Name="Segoe UI" Size="9" />
+</ClassDiagram>

@@ -61,14 +61,17 @@ namespace test_client
             // Display the value to the console.
             Console.WriteLine(resultsFalse);
 
-            
-            
 
 
+            /*System.Timers.Timer _aTimer = new System.Timers.Timer(1);
+            _aTimer.Elapsed += DoPackets;
+            _aTimer.AutoReset = true;
+            _aTimer.Enabled = true;*/
+            Thread.Sleep(100);
             Link lnk1 = VaserClient.ConnectClient("localhost", 3100, VaserOptions.ModeSSL, cCollection, "localhost");
 
             if (lnk1 != null) Console.WriteLine("1: successfully established connection.");
-
+            
             //working
             if (lnk1.Connect.StreamIsConnected) Console.WriteLine("Test. Con OK");
             while (online)
@@ -77,23 +80,24 @@ namespace test_client
                 
 
                 //proceed incoming data
-                foreach (Packet_Recv pak in system.getPakets())
+                foreach (Packet_Recv pak in system.GetPakets())
                 {
                     // [1] now you can sort the packet to the right container and object
 
                     //unpack the packet, true if the decode was successful
                     if (con1.UnpackContainer(pak, system))
                     {
-                        
+                        // Console.WriteLine("PACK");
                         system.SendContainer(pak.link, con1, 1, 1);
+                        Portal.Finialize();
                     }
                 }
 
-                Portal.Finialize();
+                
                 Thread.Sleep(1);
 
                 //entfernen
-                if (lnk1.Connect.StreamIsConnected == false) online = false;
+                if (lnk1.IsConnected == false) online = false;
             }
             //Client1.CloseClient();
             lnk1.Dispose();

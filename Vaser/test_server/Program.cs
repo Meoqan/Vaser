@@ -20,7 +20,7 @@ namespace test_server
             public int ID = 1;
             public string test = "test text!";
 
-            public byte[] by = new byte[10000];
+            public byte[] by = new byte[1000];
         }
 
         static void Main(string[] args)
@@ -115,15 +115,15 @@ namespace test_server
                             Console.WriteLine("lnk1.Connect.IPv4Address is {0}", lnk1.Connect.IPv4Address.ToString());
 
                             testmode = 2;
-                            Console.WriteLine("Send 100000 Packets....");
+                            Console.WriteLine("Send 10000 Packets....");
                             con1.test = "Message ";
-                            for (int x = 0; x < 100000; x++)
+                            for (int x = 0; x < 10000; x++)
                             {
                                 con1.ID++;
                                 system.SendContainer(test1, con1, 1, 1);
-                                
+                                Portal.Finialize();
                             }
-                            Portal.Finialize();
+                            
                         }
 
                         break;
@@ -131,7 +131,7 @@ namespace test_server
 
                         
 
-                        foreach (Packet_Recv pak in system.getPakets())
+                        foreach (Packet_Recv pak in system.GetPakets())
                         {
                             // [1] now you can sort the packet to the right container and object
                             //Console.WriteLine("the packet has the container ID {0} and is for the object ID {1} ", pak.ContainerID, pak.ObjectID);
@@ -141,11 +141,11 @@ namespace test_server
                             {
                                 if (watch.IsRunning == false) watch.Start();
 
-                                if (con1.ID == 10000) Console.WriteLine("Recived " + con1.ID);
-                                if (con1.ID == 25000) Console.WriteLine("Recived " + con1.ID);
-                                if (con1.ID == 50000) Console.WriteLine("Recived " + con1.ID);
-                                if (con1.ID == 75000) Console.WriteLine("Recived " + con1.ID);
-                                if (con1.ID == 100000)
+                                if (con1.ID == 1000) Console.WriteLine("Recived " + con1.ID);
+                                if (con1.ID == 2500) Console.WriteLine("Recived " + con1.ID);
+                                if (con1.ID == 5000) Console.WriteLine("Recived " + con1.ID);
+                                if (con1.ID == 7500) Console.WriteLine("Recived " + con1.ID);
+                                if (con1.ID == 10000)
                                 {
                                     watch.Stop();
                                     Console.WriteLine("Recived " + con1.ID);
@@ -173,7 +173,7 @@ namespace test_server
 
                     case 3:
 
-                        foreach (Packet_Recv pak in system.getPakets())
+                        foreach (Packet_Recv pak in system.GetPakets())
                         {
                             watch.Stop();
 

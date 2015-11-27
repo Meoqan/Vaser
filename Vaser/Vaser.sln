@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Express 2013 for Windows Desktop
-VisualStudioVersion = 12.0.31101.0
+# Visual Studio 14
+VisualStudioVersion = 14.0.23107.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vaser", "Vaser\Vaser.csproj", "{18FBB9B5-1BFF-411E-ABCD-B08AAFEE2D0C}"
 EndProject
@@ -24,6 +24,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "test_server_benchmark", "te
 	ProjectSection(ProjectDependencies) = postProject
 		{18FBB9B5-1BFF-411E-ABCD-B08AAFEE2D0C} = {18FBB9B5-1BFF-411E-ABCD-B08AAFEE2D0C}
 	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VaserUnitTest", "VaserUnitTest\VaserUnitTest.csproj", "{22E37FF6-C12D-4A13-A4C7-B240BA7385C2}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -51,6 +53,10 @@ Global
 		{5FA0D665-40B0-4CC6-B697-14D665186305}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{5FA0D665-40B0-4CC6-B697-14D665186305}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{5FA0D665-40B0-4CC6-B697-14D665186305}.Release|Any CPU.Build.0 = Release|Any CPU
+		{22E37FF6-C12D-4A13-A4C7-B240BA7385C2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{22E37FF6-C12D-4A13-A4C7-B240BA7385C2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{22E37FF6-C12D-4A13-A4C7-B240BA7385C2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{22E37FF6-C12D-4A13-A4C7-B240BA7385C2}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

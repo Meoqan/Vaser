@@ -14,12 +14,14 @@ namespace Vaser
 {
     public class VaserServer
     {
-        private SemaphoreSlim _ThreadLock = new SemaphoreSlim(1);
+        private object _ThreadLock = new object();
         private TcpListener _TCPListener;
-        private Thread _ListenThread;
+        //private Thread _ListenThread;
         private bool _ServerOnline = true;
+        private System.Timers.Timer _aTimer;
+        private static System.Timers.Timer _GCTimer;
 
-        private SemaphoreSlim _ConnectionList_ThreadLock = new SemaphoreSlim(1);
+        private object _ConnectionList_ThreadLock = new object();
         private List<Connection> _ConnectionList = new List<Connection>();
         private List<Link> NewLinkList = new List<Link>();
 
@@ -30,16 +32,17 @@ namespace Vaser
         {
             get
             {
-                _ThreadLock.Wait();
-                X509Certificate2 ret = _Certificate;
-                _ThreadLock.Release();
-                return ret;
+                lock (_ThreadLock)
+                {
+                    return _Certificate;
+                }
             }
             set
             {
-                _ThreadLock.Wait();
-                _Certificate = value;
-                _ThreadLock.Release();
+                lock (_ThreadLock)
+                {
+                    _Certificate = value;
+                }
             }
         }
 
@@ -47,16 +50,17 @@ namespace Vaser
         {
             get
             {
-                _ThreadLock.Wait();
-                VaserOptions ret = _ServerOption;
-                _ThreadLock.Release();
-                return ret;
+                lock (_ThreadLock)
+                {
+                    return _ServerOption;
+                }
             }
             set
             {
-                _ThreadLock.Wait();
-                _ServerOption = value;
-                _ThreadLock.Release();
+                lock (_ThreadLock)
+                {
+                    _ServerOption = value;
+                }
             }
         }
 
@@ -64,16 +68,17 @@ namespace Vaser
         {
             get
             {
-                _ThreadLock.Wait();
-                List<Connection> ret = _ConnectionList;
-                _ThreadLock.Release();
-                return ret;
+                lock (_ThreadLock)
+                {
+                    return _ConnectionList;
+                }
             }
             set
             {
-                _ThreadLock.Wait();
-                _ConnectionList = value;
-                _ThreadLock.Release();
+                lock (_ThreadLock)
+                {
+                    _ConnectionList = value;
+                }
             }
         }
 
@@ -82,16 +87,22 @@ namespace Vaser
         {
             get
             {
-                _ThreadLock.Wait();
-                bool ret = _ServerOnline;
-                _ThreadLock.Release();
-                return ret;
+                lock (_ThreadLock)
+                {
+                    return _ServerOnline;
+                }
             }
             set
             {
-                _ThreadLock.Wait();
-                _ServerOnline = value;
-                _ThreadLock.Release();
+                lock (_ThreadLock)
+                {
+                    _ServerOnline = value;
+                    if (!_ServerOnline)
+                    {
+                        _aTimer.Enabled = false;
+
+                    }
+                }
             }
         }
 
@@ -100,9 +111,12 @@ namespace Vaser
         /// </summary>
         public void Stop()
         {
-            _ThreadLock.Wait();
-            _ServerOnline = false;
-            _ThreadLock.Release();
+            lock (_ThreadLock)
+            {
+                _ServerOnline = false;
+                _aTimer.Enabled = false;
+
+            }
         }
 
         /// <summary>
@@ -111,6 +125,7 @@ namespace Vaser
         public void StopEngine()
         {
             Options.Operating = false;
+            _GCTimer.Enabled = false;
         }
 
         /// <summary>
@@ -125,12 +140,28 @@ namespace Vaser
 
             try
             {
-                _ThreadLock.Wait();
-                _ServerOption = Mode;
-                _TCPListener = new TcpListener(LocalAddress, Port);
-                _ListenThread = new Thread(new ThreadStart(ListenForClients));
-                _ListenThread.Start();
-                _ThreadLock.Release();
+                lock (_ThreadLock)
+                {
+                    _ServerOption = Mode;
+                    _TCPListener = new TcpListener(LocalAddress, Port);
+                    //_ListenThread = new Thread(new ThreadStart(ListenForClients));
+                    //_ListenThread.Start();
+                    _TCPListener.Start();
+
+                    _aTimer = new System.Timers.Timer(5);
+                    _aTimer.Elapsed += ListenForClients;
+                    _aTimer.AutoReset = true;
+                    _aTimer.Enabled = true;
+
+                    if (_GCTimer == null)
+                    {
+                        _GCTimer = new System.Timers.Timer(5000);
+                        _GCTimer.Elapsed += GC_Collect;
+                        _GCTimer.AutoReset = true;
+                        _GCTimer.Enabled = true;
+                    }
+
+                }
             }catch(Exception ex)
             {
                 throw ex;
@@ -150,13 +181,28 @@ namespace Vaser
 
             try
             {
-                _ThreadLock.Wait();
-                _Certificate = Cert;
-                _ServerOption = Mode;
-                _TCPListener = new TcpListener(LocalAddress, Port);
-                _ListenThread = new Thread(new ThreadStart(ListenForClients));
-                _ListenThread.Start();
-                _ThreadLock.Release();
+                lock (_ThreadLock)
+                {
+                    _Certificate = Cert;
+                    _ServerOption = Mode;
+                    _TCPListener = new TcpListener(LocalAddress, Port);
+                    //_ListenThread = new Thread(new ThreadStart(ListenForClients));
+                    //_ListenThread.Start();
+                    _TCPListener.Start();
+
+                    _aTimer = new System.Timers.Timer(5);
+                    _aTimer.Elapsed += ListenForClients;
+                    _aTimer.AutoReset = true;
+                    _aTimer.Enabled = true;
+
+                    if (_GCTimer == null)
+                    {
+                        _GCTimer = new System.Timers.Timer(15000);
+                        _GCTimer.Elapsed += GC_Collect;
+                        _GCTimer.AutoReset = true;
+                        _GCTimer.Enabled = true;
+                    }
+                }
             }
             catch (Exception ex)
             {
@@ -164,49 +210,55 @@ namespace Vaser
             }
         }
 
-
-        private void ListenForClients()
+        private void GC_Collect(Object source, System.Timers.ElapsedEventArgs e)
         {
-            _TCPListener.Start();
-
-            while (ServerOnline && Options.Operating)
-            {
-                try
-                {
-                    while (_TCPListener.Pending())
-                    {
-
-                        TcpClient Client = _TCPListener.AcceptTcpClient();
-
-                        ThreadPool.QueueUserWorkItem(QueueNewConnection, Client);
-
-                    }
-                }catch(Exception e)
-                {
-                    Debug.WriteLine("ERROR in VaserServer.ListenForClients() > " + e.ToString());
-                }
-                Thread.Sleep(100);
-            }
-
-            _ConnectionList_ThreadLock.Wait();
-            foreach (Connection Con in _ConnectionList)
-            {
-                Con.Stop();
-            }
-            _ConnectionList_ThreadLock.Release();
-
-            _TCPListener.Stop();
+            GC.Collect();
         }
 
+        private void ListenForClients(Object source, System.Timers.ElapsedEventArgs e)
+        {
+            try
+            {
+                while (_TCPListener.Pending())
+                {
+
+                    TcpClient Client = _TCPListener.AcceptTcpClient();
+                    
+                    ThreadPool.QueueUserWorkItem(QueueNewConnection, Client);
+
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("ERROR in VaserServer.ListenForClients() > " + ex.ToString());
+            }
+
+            if (!ServerOnline || !Options.Operating)
+            {
+                _aTimer.Enabled = false;
+
+                lock (_ConnectionList_ThreadLock)
+                {
+                    foreach (Connection Con in _ConnectionList)
+                    {
+                        Con.Stop();
+                    }
+                }
+
+                _TCPListener.Stop();
+            }
+        }
+        
         internal void QueueNewConnection(object Client)
         {
             try
             {
                 Connection con = new Connection((TcpClient)Client, true, _ServerOption, _Certificate, null, null, this);
 
-                _ConnectionList_ThreadLock.Wait();
-                _ConnectionList.Add(con);
-                _ConnectionList_ThreadLock.Release();
+                lock (_ConnectionList_ThreadLock)
+                {
+                    _ConnectionList.Add(con);
+                }
             }
             catch (Exception e)
             {
@@ -217,9 +269,10 @@ namespace Vaser
         internal void RemoveFromConnectionList(Connection con)
         {
             if (con == null) return;
-            _ConnectionList_ThreadLock.Wait();
-            _ConnectionList.Remove(con);
-            _ConnectionList_ThreadLock.Release();
+            lock (_ConnectionList_ThreadLock)
+            {
+                _ConnectionList.Remove(con);
+            }
         }
 
         /// <summary>
@@ -228,24 +281,26 @@ namespace Vaser
         /// <returns>Returns null if no new client is connected</returns>
         public Link GetNewLink()
         {
-            _ThreadLock.Wait();
-            Link lnk = null;
-
-            if (NewLinkList.Count > 0)
+            lock (_ThreadLock)
             {
-                lnk = NewLinkList[0];
-                NewLinkList.Remove(lnk);
-            }
-            _ThreadLock.Release();
+                Link lnk = null;
 
-            return lnk;
+                if (NewLinkList.Count > 0)
+                {
+                    lnk = NewLinkList[0];
+                    NewLinkList.Remove(lnk);
+                }
+
+                return lnk;
+            }
         }
 
         internal void AddNewLink(Link lnk)
         {
-            _ThreadLock.Wait();
-            NewLinkList.Add(lnk);
-            _ThreadLock.Release();
+            lock (_ThreadLock)
+            {
+                NewLinkList.Add(lnk);
+            }
         }
     }
 }

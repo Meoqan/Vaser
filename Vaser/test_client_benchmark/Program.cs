@@ -18,36 +18,62 @@ namespace test_client_benchmark
             public string test = "test text!";
 
             //also 1D arrays are posible
-            public int[] array = new int[1000];
+            //public int[] array = new int[1000];
         }
+        //Client initalisieren
+        static Portal system = null;
+        // create new container
+        
 
         static void Main(string[] args)
         {
-            // create new container
+            List<Link> Linklist = new List<Link>();
+
+            List<Link> Removelist = new List<Link>();
+
             TestContainer con1 = new TestContainer();
             TestContainer con2 = new TestContainer();
 
             bool online = true;
 
-            //Client initalisieren
-            Portal system = new Portal();
+            system = new Portal();
 
-            
 
-            
+            Thread.Sleep(1000);
 
+            System.Timers.Timer _aTimer = new System.Timers.Timer(10);
+            _aTimer.Elapsed += DoPackets;
+            _aTimer.AutoReset = true;
+            _aTimer.Enabled = true;
             //arbeiten
+
+            
             while (online)
             {
 
-                Link lnk1 = VaserClient.ConnectClient("localhost", 3100, VaserOptions.ModeKerberos);
-                Link lnk2 = VaserClient.ConnectClient("localhost", 3101, VaserOptions.ModeKerberos);
+                while (Linklist.Count < 5)
+                {
+                    Link lnk1 = VaserClient.ConnectClient("localhost", 3100, VaserOptions.ModeKerberos);
+                    Link lnk2 = VaserClient.ConnectClient("localhost", 3101, VaserOptions.ModeKerberos);
 
-                if (lnk1 != null) Console.WriteLine("1: successfully established connection.");
-                if (lnk2 != null) Console.WriteLine("2: successfully established connection.");
+                    if (lnk1 != null)
+                    {
+                        //Console.WriteLine("1: successfully established connection.");
+                        Linklist.Add(lnk1);
+                    }
+                    if (lnk2 != null)
+                    {
+                        //Console.WriteLine("2: successfully established connection.");
+                        Linklist.Add(lnk2);
+                    }
 
 
-                //send data
+
+                }
+
+
+
+                /*//send data
                 con1.test = "Data Send.";
                 // the last 2 digits are manually set [1]
                 system.SendContainer(lnk1, con1, 1, 1);
@@ -55,31 +81,69 @@ namespace test_client_benchmark
                 system.SendContainer(lnk2, con1, 1, 1);
 
                 Portal.Finialize();
+                */
 
-                int wait = 2;
-                while (wait == 2)
+                
+                //proceed incoming data
+                foreach (Packet_Recv pak in system.GetPakets())
                 {
-                    //proceed incoming data
-                    foreach (Packet_Recv pak in system.getPakets())
+                    switch (pak.ContainerID)
                     {
-                        // [1] now you can sort the packet to the right container and object
-                        Console.WriteLine("the packet has the container ID {0} and is for the object ID {1} ", pak.ContainerID, pak.ObjectID);
+                        case 1:
 
-                        //unpack the packet, true if the decode was successful
-                        if (con1.UnpackContainer(pak, system))
-                        {
-                            Console.WriteLine(con1.test);
-                            if (con1.test == "Data Send.") wait=1;
-                        }
+                            // [1] now you can sort the packet to the right container and object
+                            //Console.WriteLine("the packet has the container ID {0} and is for the object ID {1} ", pak.ContainerID, pak.ObjectID);
+
+                            //unpack the packet, true if the decode was successful
+                            if (con2.UnpackContainer(pak, system))
+                            {
+                                if (con2.ID < 0) Console.WriteLine("Decode error: " + con2.ID);
+                                //if (con2.ID > 100) Console.WriteLine("Decode error: " + con2.ID);
+                                if (con2.ID < 5000)
+                                {
+                                    //Console.WriteLine("Ping! " + counter + " CounterID" + con2.ID + " Object:" + pak.ObjectID);
+
+                                    con2.ID += 1;
+                                    system.SendContainer(pak.link, con2, 1, pak.ObjectID);
+                                }
+                                else
+                                {
+                                    counter++;
+                                    Console.WriteLine("Disconnecting! " + counter + " CounterID" + con2.ID + " Object:" + pak.ObjectID);
+                                    pak.link.Dispose();
+                                }
+                            }
+                            else
+                            {
+                                Console.WriteLine("Decode error");
+                            }
+                            break;
                     }
-                    
                 }
-                Thread.Sleep(10);
-                //remove
-                lnk1.Dispose();
-                lnk2.Dispose();
+                Portal.Finialize();
 
+                Thread.Sleep(1);
+                
+                foreach(Link l in Linklist)
+                {
+                    if (!l.IsConnected) Removelist.Add(l);
+                }
+
+                foreach (Link l in Removelist)
+                {
+                    Linklist.Remove(l);
+                    //free all resources
+                    l.Dispose();
+                    //Console.WriteLine("CLX DIS");
+                }
+                Removelist.Clear();
             }
+        }
+
+        static int counter = 0;
+        private static void DoPackets(Object source, System.Timers.ElapsedEventArgs e)
+        {
+            
         }
     }
 }

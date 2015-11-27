@@ -12,7 +12,17 @@ namespace Vaser.OON
         private List<Portal> PortalList = new List<Portal>();
 
 
+        /*public Portal CreatePortal(int ID)
+        {
+            Portal port = new Portal(ID);
 
+            lock (_ListLock)
+            {
+                PortalList.Add(port);
+            }
+
+            return port;
+        }*/
 
         public void Add(Portal portal)
         {

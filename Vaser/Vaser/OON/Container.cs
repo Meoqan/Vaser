@@ -89,7 +89,7 @@ namespace Vaser
         internal Packet_Send PackContainer()
         {
             _SendPacket = new Packet_Send();
-
+            
             if (_ms.Length < 10000000)
             {
                 _ms.SetLength(0);
@@ -102,7 +102,6 @@ namespace Vaser
                 _bw.Dispose();
                 _ms = new MemoryStream();
                 _bw = new BinaryWriter(_ms);
-                GC.Collect();
             }
             
 

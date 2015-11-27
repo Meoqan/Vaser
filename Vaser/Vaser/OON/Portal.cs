@@ -62,35 +62,35 @@ namespace Vaser
             CList.Add(this);
         }
 
-        internal static SemaphoreSlim _givePacketToClass_slimlock = new SemaphoreSlim(1);
+        internal static object _givePacketToClass_slimlock = new object();
 
-        internal static void lock_givePacketToClass() { _givePacketToClass_slimlock.Wait(); }
-        internal static void release_givePacketToClass() { _givePacketToClass_slimlock.Release(); }
+        //internal static void lock_givePacketToClass() { _givePacketToClass_slimlock.Wait(); }
+        //internal static void release_givePacketToClass() { _givePacketToClass_slimlock.Release(); }
 
         internal static void givePacketToClass(Packet_Recv pak, byte[] data)
         {
-            //Console.WriteLine(pak.PacketSize);
-            //_givePacketToClass_slimlock.Wait();
-            Portal clas = CList[pak.ClassID];
-            clas.packetList1.Add(pak);
-            pak.StreamPosition = clas.rms1.Position;
-            if (data != null)
+            lock (_givePacketToClass_slimlock)
             {
-                pak.PacketSize = data.Length;
-                clas.rbw1.Write(data);
+                Portal clas = CList[pak.ClassID];
+                clas.packetList1.Add(pak);
+                pak.StreamPosition = clas.rms1.Position;
+                if (data != null)
+                {
+                    pak.PacketSize = data.Length;
+                    clas.rbw1.Write(data);
+                }
+                else
+                {
+                    pak.PacketSize = 0;
+                }
             }
-            else
-            {
-                pak.PacketSize = 0;
-            }
-            //_givePacketToClass_slimlock.Release();
         }
 
         /// <summary>
         /// Get all new received data packets.
         /// </summary>
         /// <returns>a list of all packets</returns>
-        public List<Packet_Recv> getPakets()
+        public List<Packet_Recv> GetPakets()
         {
             packetList2.Clear();
 
@@ -108,7 +108,7 @@ namespace Vaser
                 rms2 = new MemoryStream();
                 rbw2 = new BinaryWriter(rms2);
                 rbr2 = new BinaryReader(rms2);
-                GC.Collect();
+                //GC.Collect();
             }
             //rms2.SetLength(0);
             //rms2.Flush();
@@ -122,19 +122,20 @@ namespace Vaser
             rbrTEMP = rbr2;
 
 
-            _givePacketToClass_slimlock.Wait();
+            lock (_givePacketToClass_slimlock)
+            {
 
-            packetList2 = packetList1;
-            rms2 = rms1;
-            rbw2 = rbw1;
-            rbr2 = rbr1;
+                packetList2 = packetList1;
+                rms2 = rms1;
+                rbw2 = rbw1;
+                rbr2 = rbr1;
 
-            packetList1 = packetListTEMP;
-            rms1 = rmsTEMP;
-            rbw1 = rbwTEMP;
-            rbr1 = rbrTEMP;
+                packetList1 = packetListTEMP;
+                rms1 = rmsTEMP;
+                rbw1 = rbwTEMP;
+                rbr1 = rbrTEMP;
 
-            _givePacketToClass_slimlock.Release();
+            }
 
 
             rms2.Position = 0;
@@ -151,7 +152,7 @@ namespace Vaser
         /// <param name="ObjectID">manually set</param>
         public void SendContainer(Link lnk, Container con, int ContainerID, int ObjectID)
         {
-            if (lnk.bw == null) return;
+            if (lnk.IsConnected == false || lnk.bw == null) return;
             Packet_Send pak = null;
             if (con != null)
             {  
@@ -169,23 +170,25 @@ namespace Vaser
 
             counter += Options.PacketHeadSize;
 
-            lnk.SendData_Lock.Wait();
-            if (lnk.bw != null)
+            lock (lnk.SendData_Lock)
             {
-                lnk.bw.Write(counter);
 
-                lnk.bw.Write(this.Cpos);
-                lnk.bw.Write(ObjectID);
-                lnk.bw.Write(ContainerID);
-
-
-                if (con != null)
+                if (lnk.bw != null)
                 {
-                    lnk.bw.Write(pak.SendData);
-                    //Debug.WriteLine("Protal.SendContainer byte wirtten: " + pak.SendData.Length);
+                    lnk.bw.Write(counter);
+
+                    lnk.bw.Write(this.Cpos);
+                    lnk.bw.Write(ObjectID);
+                    lnk.bw.Write(ContainerID);
+
+
+                    if (con != null)
+                    {
+                        lnk.bw.Write(pak.SendData);
+                        //Debug.WriteLine("Protal.SendContainer byte wirtten: " + pak.SendData.Length);
+                    }
                 }
             }
-            lnk.SendData_Lock.Release();
             
 
             //big_data_sms.SetLength(0);

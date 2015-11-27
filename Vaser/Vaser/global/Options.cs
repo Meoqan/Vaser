@@ -9,28 +9,29 @@ namespace Vaser.global
 {
     public class Options
     {
-        private static SemaphoreSlim _Static_ThreadLock = new SemaphoreSlim(1);
-        private static bool _Operating = true;
-        private static int _MaximumPacketSize = 65012;
-        private static int _PacketHeadSize = 12;
-
+        //private static object _Static_ThreadLock = new object();
+        public static volatile bool Operating = true;
+        public static readonly int MaximumPacketSize = 65012;
+        public static readonly int PacketHeadSize = 12;
+        /*
         public static bool Operating
         {
             get
             {
-                _Static_ThreadLock.Wait();
-                bool ret = _Operating;
-                _Static_ThreadLock.Release();
-                return ret;
+                lock(_Static_ThreadLock)
+                {
+                    return _Operating;
+                }
             }
             set
             {
-                _Static_ThreadLock.Wait();
-                _Operating = value;
-                _Static_ThreadLock.Release();
+                lock (_Static_ThreadLock)
+                {
+                    _Operating = value;
+                }
             }
         }
-
+        
         public static int MaximumPacketSize
         {
             get
@@ -66,6 +67,6 @@ namespace Vaser.global
                 _PacketHeadSize = value;
                 _Static_ThreadLock.Release();
             }
-        }
+        }*/
     }
 }

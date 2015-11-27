@@ -14,12 +14,12 @@ namespace Vaser
         private static SemaphoreSlim _Static_ThreadLock = new SemaphoreSlim(1);
         private static List<Link> _LinkList = new List<Link>();
 
-        private SemaphoreSlim _Data_Lock = new SemaphoreSlim(1);
-        private SemaphoreSlim _Connection_Lock = new SemaphoreSlim(1);
-        internal SemaphoreSlim SendData_Lock = new SemaphoreSlim(1);
+        private object _Data_Lock = new object();
+        private object _Connection_Lock = new object();
+        internal object SendData_Lock = new object();
 
         private Connection _Connect;
-        private bool _Valid = false;
+        public volatile bool Valid = false;
         private MemoryStream _ms = null;
         internal BinaryWriter bw = null;
 
@@ -38,16 +38,17 @@ namespace Vaser
         {
             get
             {
-                _Data_Lock.Wait();
-                string ret = _UserName;
-                _Data_Lock.Release();
-                return ret;
+                lock(_Data_Lock)
+                {
+                    return _UserName;
+                }
             }
             set
             {
-                _Data_Lock.Wait();
-                _UserName = value;
-                _Data_Lock.Release();
+                lock (_Data_Lock)
+                {
+                    _UserName = value;
+                }
             }
         }
 
@@ -55,16 +56,17 @@ namespace Vaser
         {
             get
             {
-                _Data_Lock.Wait();
-                bool ret = _IsKerberos;
-                _Data_Lock.Release();
-                return ret;
+                lock (_Data_Lock)
+                {
+                    return _IsKerberos;
+                }
             }
             set
             {
-                _Data_Lock.Wait();
-                _IsKerberos = value;
-                _Data_Lock.Release();
+                lock (_Data_Lock)
+                {
+                    _IsKerberos = value;
+                }
             }
         }
 
@@ -72,16 +74,17 @@ namespace Vaser
         {
             get
             {
-                _Data_Lock.Wait();
-                bool ret = _IsAuthenticated;
-                _Data_Lock.Release();
-                return ret;
+                lock (_Data_Lock)
+                {
+                    return _IsAuthenticated;
+                }
             }
             set
             {
-                _Data_Lock.Wait();
-                _IsAuthenticated = value;
-                _Data_Lock.Release();
+                lock (_Data_Lock)
+                {
+                    _IsAuthenticated = value;
+                }
             }
         }
 
@@ -89,16 +92,17 @@ namespace Vaser
         {
             get
             {
-                _Data_Lock.Wait();
-                bool ret = _IsEncrypted;
-                _Data_Lock.Release();
-                return ret;
+                lock (_Data_Lock)
+                {
+                    return _IsEncrypted;
+                }
             }
             set
             {
-                _Data_Lock.Wait();
-                _IsEncrypted = value;
-                _Data_Lock.Release();
+                lock (_Data_Lock)
+                {
+                    _IsEncrypted = value;
+                }
             }
         }
 
@@ -106,16 +110,17 @@ namespace Vaser
         {
             get
             {
-                _Data_Lock.Wait();
-                bool ret = _IsMutuallyAuthenticated;
-                _Data_Lock.Release();
-                return ret;
+                lock (_Data_Lock)
+                {
+                    return _IsMutuallyAuthenticated;
+                }
             }
             set
             {
-                _Data_Lock.Wait();
-                _IsMutuallyAuthenticated = value;
-                _Data_Lock.Release();
+                lock (_Data_Lock)
+                {
+                    _IsMutuallyAuthenticated = value;
+                }
             }
         }
 
@@ -123,16 +128,17 @@ namespace Vaser
         {
             get
             {
-                _Data_Lock.Wait();
-                bool ret = _IsSigned;
-                _Data_Lock.Release();
-                return ret;
+                lock (_Data_Lock)
+                {
+                    return _IsSigned;
+                }
             }
             set
             {
-                _Data_Lock.Wait();
-                _IsSigned = value;
-                _Data_Lock.Release();
+                lock (_Data_Lock)
+                {
+                    _IsSigned = value;
+                }
             }
         }
 
@@ -140,16 +146,17 @@ namespace Vaser
         {
             get
             {
-                _Data_Lock.Wait();
-                bool ret = _IsServer;
-                _Data_Lock.Release();
-                return ret;
+                lock (_Data_Lock)
+                {
+                    return _IsServer;
+                }
             }
             set
             {
-                _Data_Lock.Wait();
-                _IsServer = value;
-                _Data_Lock.Release();
+                lock (_Data_Lock)
+                {
+                    _IsServer = value;
+                }
             }
         }
 
@@ -174,38 +181,46 @@ namespace Vaser
         {
             get
             {
-                _Connection_Lock.Wait();
-                Connection ret = _Connect;
-                _Connection_Lock.Release();
-                return ret;
+                lock (_Connection_Lock)
+                {
+                    return _Connect;
+                }
             }
             set
             {
-                _Connection_Lock.Wait();
-                _Connect = value;
-                _Connection_Lock.Release();
+                lock (_Connection_Lock)
+                {
+                    _Connect = value;
+                }
             }
         }
 
-        public bool Valid
+        /*public bool Valid
         {
             get
             {
-                _Connection_Lock.Wait();
-                bool ret = _Valid;
-                _Connection_Lock.Release();
-                return ret;
+                lock (_Connection_Lock)
+                {
+                    return _Valid;
+                }
             }
             set
             {
-                _Connection_Lock.Wait();
-                _Valid = value;
-                _Connection_Lock.Release();
+                lock (_Connection_Lock)
+                {
+                    _Valid = value;
+                }
+            }
+        }*/
+
+        public bool IsConnected
+        {
+            get
+            {
+                return _Connect.StreamIsConnected;
             }
         }
-        
 
-        
 
         /// <summary>
         /// the remote endpoint IPAddress
@@ -220,8 +235,11 @@ namespace Vaser
 
         public Link()
         {
-            _ms = new MemoryStream();
-            bw = new BinaryWriter(_ms);
+            lock (SendData_Lock)
+            {
+                _ms = new MemoryStream();
+                bw = new BinaryWriter(_ms);
+            }
         }
 
         /// <summary>
@@ -233,6 +251,7 @@ namespace Vaser
 
             _Static_ThreadLock.Wait();
             _LinkList.Add(this);
+            
             _Static_ThreadLock.Release();
         }
 
@@ -249,49 +268,51 @@ namespace Vaser
             if (_LinkList.Contains(this)) _LinkList.Remove(this);
             _Static_ThreadLock.Release();
 
-            SendData_Lock.Wait();
-            if (bw != null) bw.Dispose();
-            if (_ms != null) _ms.Dispose();
-            if (bw != null) bw = null;
-            if (_ms != null) _ms = null;
-            SendData_Lock.Release();
+            lock (SendData_Lock)
+            {
+                if (bw != null) bw.Dispose();
+                if (_ms != null) _ms.Dispose();
+                if (bw != null) bw = null;
+                if (_ms != null) _ms = null;
+            }
 
             Connect.Dispose();
         }
 
         internal void SendData()
         {
-            SendData_Lock.Wait();
-            if (Connect != null && _ms != null)
+            lock (SendData_Lock)
             {
-                if (_ms.Length > 0)
+                if (Connect != null && _ms != null)
                 {
-                    //Debug.WriteLine("Link.SendData byte wirtten: " + _ms.Length);
-                    Connect.SendData(_ms.ToArray());
-
-
-
-                    //_ms.SetLength(0);
-                    //_ms.Flush();
-                    //bw.Flush();
-
-                    if (_ms.Length < 10000000)
+                    if (_ms.Length > 0)
                     {
-                        _ms.SetLength(0);
-                        _ms.Flush();
-                        bw.Flush();
-                    }
-                    else
-                    {
-                        _ms.Dispose();
-                        bw.Dispose();
-                        _ms = new MemoryStream();
-                        bw = new BinaryWriter(_ms);
-                        GC.Collect();
+                        //Debug.WriteLine("Link.SendData byte wirtten: " + _ms.Length);
+                        Connect.SendData(_ms.ToArray());
+
+
+
+                        //_ms.SetLength(0);
+                        //_ms.Flush();
+                        //bw.Flush();
+
+                        if (_ms.Length < 10000000)
+                        {
+                            _ms.SetLength(0);
+                            _ms.Flush();
+                            bw.Flush();
+                        }
+                        else
+                        {
+                            _ms.Dispose();
+                            bw.Dispose();
+                            _ms = new MemoryStream();
+                            bw = new BinaryWriter(_ms);
+                            //GC.Collect();
+                        }
                     }
                 }
             }
-            SendData_Lock.Release();
         }
     }
 }

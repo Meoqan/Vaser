@@ -33,7 +33,7 @@ namespace Vaser
                     Connection con = new Connection(client, false, VaserOptions.ModeKerberos);
 
                     Link.LinkList.Add(con.link);
-
+                    
                     return con.link;
                 }
                 else
