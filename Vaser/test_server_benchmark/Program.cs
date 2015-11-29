@@ -36,8 +36,8 @@ namespace test_server_benchmark
             //initialize the server
             system = new Portal();
             //start the server
-            VaserServer Server1 = new VaserServer(System.Net.IPAddress.Any, 3100, VaserOptions.ModeKerberos);
-            VaserServer Server2 = new VaserServer(System.Net.IPAddress.Any, 3101, VaserOptions.ModeKerberos);
+            VaserServer Server1 = new VaserServer(System.Net.IPAddress.Any, 3100, VaserOptions.ModeNotEncrypted);
+            VaserServer Server2 = new VaserServer(System.Net.IPAddress.Any, 3101, VaserOptions.ModeNotEncrypted);
             TestContainer con2 = new TestContainer();
             //create connection managing lists
             List<Link> Livinglist = new List<Link>();

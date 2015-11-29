@@ -30,7 +30,7 @@ namespace Vaser
                 client.Connect(IP, Port);
                 if (client.Connected)
                 {
-                    Connection con = new Connection(client, false, VaserOptions.ModeKerberos);
+                    Connection con = new Connection(client, false, Mode);
 
                     Link.LinkList.Add(con.link);
                     

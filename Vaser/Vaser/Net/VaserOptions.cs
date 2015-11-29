@@ -8,7 +8,7 @@ namespace Vaser
 {
     public class VaserOptions
     {
-        //public static readonly VaserOptions ModeNoSecureDebug = new VaserOptions(0);
+        public static readonly VaserOptions ModeNotEncrypted = new VaserOptions(0);
         public static readonly VaserOptions ModeKerberos = new VaserOptions(1);
         public static readonly VaserOptions ModeSSL = new VaserOptions(2);
 

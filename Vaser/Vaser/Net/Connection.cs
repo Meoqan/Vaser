@@ -28,6 +28,7 @@ namespace Vaser
         private NetworkStream _ConnectionStream;
         private NegotiateStream _AuthStream;
         private SslStream _sslStream;
+        private NetworkStream _NotEncryptedStream;
         //private Thread _ProcessingDecryptThread;
         //private Thread _ClientThread;
         private TcpClient _SocketTCPClient;
@@ -291,6 +292,11 @@ namespace Vaser
                     _sslStream = new SslStream(_ConnectionStream, false);
                 }
 
+                if (_Mode == VaserOptions.ModeNotEncrypted)
+                {
+                    _NotEncryptedStream = _ConnectionStream;
+                }
+
                 if (IsServer)
                 { //server
 
@@ -321,6 +327,12 @@ namespace Vaser
                         link.IsEncrypted = true;
                         link.IsServer = true;
                     }
+
+                    if (_Mode == VaserOptions.ModeNotEncrypted)
+                    {
+                        link.IsServer = true;
+                    }
+
                     BootupDone = true;
                     server.AddNewLink(link);
 
@@ -757,6 +769,10 @@ namespace Vaser
                 {
                     _sslStream.BeginRead(_buff, 0, _buff.Length, new AsyncCallback(ReceiveCallback), _sslStream);
                 }
+                if (_NotEncryptedStream != null)
+                {
+                    _NotEncryptedStream.BeginRead(_buff, 0, _buff.Length, new AsyncCallback(ReceiveCallback), _NotEncryptedStream);
+                }
             }
             catch (Exception e)
             {
@@ -767,13 +783,13 @@ namespace Vaser
                 //if (e.InnerException != null) Console.WriteLine("Inner exception: {0}", e.InnerException);
             }
         }
-        
+
         private void ReceiveCallback(IAsyncResult ar)
         {
             if (!BootupDone) throw new Exception("Data was recived b4 connection was booted.");
             try
             {
-                
+
                 // Read data from the remote device.
                 if (_AuthStream != null)
                 {
@@ -783,22 +799,25 @@ namespace Vaser
                 {
                     bytesRead = _sslStream.EndRead(ar);
                 }
-                
+                if (_NotEncryptedStream != null)
+                {
+                    bytesRead = _NotEncryptedStream.EndRead(ar);
+                }
 
-                
+
                 if (bytesRead > 0)
                 {
                     //Debug.WriteLine("{0} bytes read by the Connection.", bytesRead);
-                    
+
                     lock (_ReadStream_Lock)
                     {
                         _rbw1.Write(_buff, 0, bytesRead);
 
                         QueueStreamDecrypt();
                     }
-                    
+
                 }
-                
+
                 // Get the rest of the data.
                 if (_AuthStream != null && _AuthStream.CanRead)
                 {
@@ -808,7 +827,12 @@ namespace Vaser
                 {
                     _sslStream.BeginRead(_buff, 0, _buff.Length, new AsyncCallback(ReceiveCallback), _sslStream);
                 }
-              
+
+                if (_NotEncryptedStream != null && _NotEncryptedStream.CanRead)
+                {
+                    _NotEncryptedStream.BeginRead(_buff, 0, _buff.Length, new AsyncCallback(ReceiveCallback), _NotEncryptedStream);
+                }
+
             }
             catch (Exception e)
             {
@@ -836,8 +860,8 @@ namespace Vaser
             try
             {
                 if (!StreamIsConnected) return;
-                if (_AuthStream == null && _sslStream == null) return;
-                
+                //if (_AuthStream == null && _sslStream == null && _NotEncryptedStream == null) return;
+
                 if (_sms1.Position == 0)
                 {
                     IsInSendQueue = false;
@@ -883,7 +907,10 @@ namespace Vaser
                     _sslStream.BeginWrite(byteData, 0, byteData.Length, new AsyncCallback(SendCallback), _sslStream);
                 }
 
-
+                if (_NotEncryptedStream != null && _NotEncryptedStream.CanWrite && _SocketTCPClient.Connected)
+                {
+                    _NotEncryptedStream.BeginWrite(byteData, 0, byteData.Length, new AsyncCallback(SendCallback), _NotEncryptedStream);
+                }
             }
             catch (Exception e)
             {
@@ -904,7 +931,8 @@ namespace Vaser
                 // Complete sending the data to the remote device.
                 if (_AuthStream != null) _AuthStream.EndWrite(ar);
                 if (_sslStream != null) _sslStream.EndWrite(ar);
-                
+                if (_NotEncryptedStream != null) _NotEncryptedStream.EndWrite(ar);
+
                 // Contiue sending...
                 Send(null);
             }

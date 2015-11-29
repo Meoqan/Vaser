@@ -51,10 +51,10 @@ namespace test_client_benchmark
             while (online)
             {
 
-                while (Linklist.Count < 5)
+                while (Linklist.Count < 50)
                 {
-                    Link lnk1 = VaserClient.ConnectClient("localhost", 3100, VaserOptions.ModeKerberos);
-                    Link lnk2 = VaserClient.ConnectClient("localhost", 3101, VaserOptions.ModeKerberos);
+                    Link lnk1 = VaserClient.ConnectClient("localhost", 3100, VaserOptions.ModeNotEncrypted);
+                    Link lnk2 = VaserClient.ConnectClient("localhost", 3101, VaserOptions.ModeNotEncrypted);
 
                     if (lnk1 != null)
                     {
@@ -99,7 +99,7 @@ namespace test_client_benchmark
                             {
                                 if (con2.ID < 0) Console.WriteLine("Decode error: " + con2.ID);
                                 //if (con2.ID > 100) Console.WriteLine("Decode error: " + con2.ID);
-                                if (con2.ID < 5000)
+                                if (con2.ID < 500)
                                 {
                                     //Console.WriteLine("Ping! " + counter + " CounterID" + con2.ID + " Object:" + pak.ObjectID);
 
