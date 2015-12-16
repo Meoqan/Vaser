@@ -9,9 +9,12 @@ using System.Net;
 
 namespace Vaser
 {
+    /// <summary>
+    /// This class manages your connections to the server.
+    /// </summary>
     public class Link
     {
-        private static SemaphoreSlim _Static_ThreadLock = new SemaphoreSlim(1);
+        internal static object _Static_ThreadLock = new object();
         private static List<Link> _LinkList = new List<Link>();
 
         private object _Data_Lock = new object();
@@ -19,9 +22,13 @@ namespace Vaser
         internal object SendData_Lock = new object();
 
         private Connection _Connect;
-        public volatile bool Valid = false;
+        internal volatile bool Valid = false;
+        private volatile bool Teardown = false;
         private MemoryStream _ms = null;
         internal BinaryWriter bw = null;
+
+        private object _AttachedObject = null;
+        private uint _AttachedID = 0;
 
         //Kerberos
         private string _UserName = string.Empty;
@@ -33,7 +40,57 @@ namespace Vaser
         private bool _IsSigned = false;
         private bool _IsServer = false;
 
+        /// <summary>
+        /// EventHandler for disconnecting
+        /// </summary>
+        public event EventHandler<LinkEventArgs> Disconnecting;
 
+
+        /// <summary>
+        /// Any to this link related object can be safed here. This variable is threadsafe and is free to use.
+        /// </summary>
+        public object AttachedObject
+        {
+            get
+            {
+                lock (_Data_Lock)
+                {
+                    return _AttachedObject;
+                }
+            }
+            set
+            {
+                lock (_Data_Lock)
+                {
+                    _AttachedObject = value;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Any to this link related ID can be safed here. This variable is threadsafe and is free to use.
+        /// </summary>
+        public uint AttachedID
+        {
+            get
+            {
+                lock (_Data_Lock)
+                {
+                    return _AttachedID;
+                }
+            }
+            set
+            {
+                lock (_Data_Lock)
+                {
+                    _AttachedID = value;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Contains the UserName of Kerberos connections.
+        /// </summary>
         public string UserName
         {
             get
@@ -160,24 +217,28 @@ namespace Vaser
             }
         }
 
+        /// <summary>
+        /// A list of all active links. Do not modify!
+        /// </summary>
         public static List<Link> LinkList
         {
             get
             {
-                _Static_ThreadLock.Wait();
-                List<Link> ret = _LinkList;
-                _Static_ThreadLock.Release();
-                return ret;
+                lock(_Static_ThreadLock)
+                {
+                    return _LinkList;
+                }
             }
             set
             {
-                _Static_ThreadLock.Wait();
-                _LinkList = value;
-                _Static_ThreadLock.Release();
+                lock (_Static_ThreadLock)
+                {
+                    _LinkList = value;
+                }
             }
         }
 
-        public Connection Connect
+        internal Connection Connect
         {
             get
             {
@@ -243,20 +304,44 @@ namespace Vaser
         }
 
         /// <summary>
-        /// Accept the client
+        /// Accept the new connected client. Incoming data will be now received.
         /// </summary>
         public void Accept()
         {
             Valid = true;
 
-            _Static_ThreadLock.Wait();
-            _LinkList.Add(this);
-            
-            _Static_ThreadLock.Release();
+            lock (_Static_ThreadLock)
+            {
+                _LinkList.Add(this);
+
+            }
         }
 
+        internal static void SendAllData()
+        {
+            lock (_Static_ThreadLock)
+            {
+                foreach (Link lnk in _LinkList)
+                {
+                    lnk.SendData();
+                }
+            }
+        }
+
+        protected virtual void OnDisconnectingLink(LinkEventArgs e)
+        {
+
+            EventHandler<LinkEventArgs> handler = Disconnecting;
+            if (handler != null)
+            {
+                //Console.WriteLine("OnDisconnectingLink called!");
+                handler(this, e);
+            }
+        }
+
+
         /// <summary>
-        /// Close the connection and free all resources
+        /// Close the connection and free all resources.
         /// </summary>
         public void Dispose()
         {
@@ -264,9 +349,10 @@ namespace Vaser
 
             Connect.Stop();
 
-            _Static_ThreadLock.Wait();
-            if (_LinkList.Contains(this)) _LinkList.Remove(this);
-            _Static_ThreadLock.Release();
+            lock (_Static_ThreadLock)
+            {
+                if (_LinkList.Contains(this)) _LinkList.Remove(this);
+            }
 
             lock (SendData_Lock)
             {
@@ -277,7 +363,20 @@ namespace Vaser
             }
 
             Connect.Dispose();
+
+            if (!Teardown)
+            {
+                
+                Teardown = true;
+                LinkEventArgs args = new LinkEventArgs();
+                args.lnk = this;
+                OnDisconnectingLink(args);
+            }
+
+            
         }
+
+        
 
         internal void SendData()
         {

@@ -6,26 +6,29 @@ using System.Threading.Tasks;
 
 namespace Vaser
 {
+    /// <summary>
+    /// This class is a simple ID pool holder.
+    /// </summary>
     public class IDPool
     {
         private object threadlock = new object();
-        private int _MaxIDs = 0;
+        private uint _MaxIDs = 0;
 
-        private List<int> freeIDList = new List<int>();
-        private List<int> usedIDList = new List<int>();
+        private List<uint> freeIDList = new List<uint>();
+        private List<uint> usedIDList = new List<uint>();
 
 
         /// <summary>
         /// Creates a new pool of IDs
         /// </summary>
         /// <param name="MaxIDs"></param>
-        public IDPool(int MaxIDs)
+        public IDPool(uint MaxIDs)
         {
-            if (MaxIDs < 0) throw new Exception("MaxIDs must be an positive integer");
+            //if (MaxIDs < 0) throw new Exception("MaxIDs must be an positive integer");
             lock (threadlock)
             {
                 _MaxIDs = MaxIDs;
-                for (int x = 1; x <= _MaxIDs; x++)
+                for (uint x = 1; x <= _MaxIDs; x++)
                 {
                     freeIDList.Add(x);
                 }
@@ -36,13 +39,13 @@ namespace Vaser
         /// Returns a free ID from the pool
         /// </summary>
         /// <returns>ID</returns>
-        public int GetFreeID()
+        public uint GetFreeID()
         {
             lock(threadlock)
             {
                 if(freeIDList.Count == 0) throw new Exception("free pool is empty");
 
-                int id = freeIDList[0];
+                uint id = freeIDList[0];
                 freeIDList.Remove(id);
                 usedIDList.Add(id);
                 return id;
@@ -55,9 +58,9 @@ namespace Vaser
         /// </summary>
         /// <param name="id">ID</param>
         /// <returns>ID</returns>
-        public int RegisterFreeID(int id)
+        public uint RegisterFreeID(uint id)
         {
-            if (id < 0) throw new Exception("ID must be an positive integer");
+            //if (id < 0) throw new Exception("ID must be an positive integer");
             
             lock (threadlock)
             {
@@ -72,9 +75,9 @@ namespace Vaser
         /// Frees the used id back to the pool
         /// </summary>
         /// <param name="id">ID</param>
-        public void DisposeID(int id)
+        public void DisposeID(uint id)
         {
-            if (id < 0) throw new Exception("ID must be an positive integer");
+            //if (id < 0) throw new Exception("ID must be an positive integer");
 
             lock (threadlock)
             {
@@ -100,14 +103,14 @@ namespace Vaser
         /// </summary>
         /// <param name="Quantity">quantity of new IDs</param>
         /// <returns>new maximum IDs</returns>
-        public int AddFreeIDs(int Quantity)
+        public uint AddFreeIDs(uint Quantity)
         {
-            if (Quantity < 0) throw new Exception("Quantity must be an positive integer");
+            //if (Quantity < 0) throw new Exception("Quantity must be an positive integer");
             lock (threadlock)
             {
-                int _OldMaxIDs = _MaxIDs;
+                uint _OldMaxIDs = _MaxIDs;
                 _MaxIDs += Quantity;
-                for (int x = _OldMaxIDs+1; x <= Quantity; x++)
+                for (uint x = _OldMaxIDs+1; x <= Quantity; x++)
                 {
                     freeIDList.Add(x);
                 }

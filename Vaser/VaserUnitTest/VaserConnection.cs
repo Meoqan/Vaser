@@ -102,7 +102,7 @@ namespace VaserUnitTest
                     con1.array = new int[1];
                     //system.SendContainer(l, con2, 1, 1);
                     //Console.WriteLine("beep.");
-                    if (!l.Connect.StreamIsConnected) Removelist.Add(l);
+                    if (!l.IsConnected) Removelist.Add(l);
                 }
 
                 foreach (Link l in Removelist)

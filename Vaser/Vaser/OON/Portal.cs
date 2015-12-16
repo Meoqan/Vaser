@@ -7,17 +7,19 @@ using System.Threading;
 using System.Reflection;
 using System.Security;
 using System.IO;
-using Vaser.global;
 using System.Diagnostics;
 
 namespace Vaser
 {
+    /// <summary>
+    /// This class is a data gateway for sending and receiving packets.
+    /// It helps to manage the datastream by separating the packets by its thematic.
+    /// </summary>
     public class Portal
     {
-        internal int Cpos = 0;
-        private static List<Portal> CList = new List<Portal>();
-
-
+        internal byte _PID = 0;
+        
+        internal PortalCollection _PCollection;
 
         internal int counter = 0;
 
@@ -27,28 +29,34 @@ namespace Vaser
         //MemoryStream sms = null;
         //BinaryWriter sbw = null;
 
-        private List<Packet_Recv> packetList1 = new List<Packet_Recv>();
+        /// <summary>
+        /// EventHandler for incoming packets.
+        /// </summary>
+        public event EventHandler<PacketEventArgs> IncomingPacket;
+
+        internal List<Packet_Recv> packetList1 = new List<Packet_Recv>();
         internal MemoryStream rms1 = null;
-        BinaryWriter rbw1 = null;
+        internal BinaryWriter rbw1 = null;
         internal BinaryReader rbr1 = null;
 
-        private List<Packet_Recv> packetListTEMP = null;
+        internal List<Packet_Recv> packetListTEMP = null;
         internal MemoryStream rmsTEMP = null;
-        BinaryWriter rbwTEMP = null;
+        internal BinaryWriter rbwTEMP = null;
         internal BinaryReader rbrTEMP = null;
 
-        private List<Packet_Recv> packetList2 = new List<Packet_Recv>();
+        internal List<Packet_Recv> packetList2 = new List<Packet_Recv>();
         internal MemoryStream rms2 = null;
-        BinaryWriter rbw2 = null;
+        internal BinaryWriter rbw2 = null;
         internal BinaryReader rbr2 = null;
 
-        public Portal()
+        /// <summary>
+        /// Creates a new portal. Please use 'MyPortalCollection.CreatePortal(...)' instead.
+        /// </summary>
+        /// <param name="PColl"></param>
+        /// <param name="PID"></param>
+        public Portal(PortalCollection PColl, byte PID)
         {
-            //big_data_sms = new MemoryStream();
-            //big_data_sbw = new BinaryWriter(big_data_sms);
-
-            //sms = new MemoryStream();
-            //sbw = new BinaryWriter(sms);
+            if (PColl == null) throw new Exception("A PortalCollection is required. Please use <PortalCollection>.CreatePortal(ID) for creating portals.");
 
             rms1 = new MemoryStream();
             rbw1 = new BinaryWriter(rms1);
@@ -58,31 +66,63 @@ namespace Vaser
             rbw2 = new BinaryWriter(rms2);
             rbr2 = new BinaryReader(rms2);
 
-            Cpos = CList.Count;
-            CList.Add(this);
+            _PCollection = PColl;
+            _PID = PID;
         }
 
-        internal static object _givePacketToClass_slimlock = new object();
 
-        //internal static void lock_givePacketToClass() { _givePacketToClass_slimlock.Wait(); }
-        //internal static void release_givePacketToClass() { _givePacketToClass_slimlock.Release(); }
-
-        internal static void givePacketToClass(Packet_Recv pak, byte[] data)
+        internal object _AddPacket_lock = new object();
+        internal void AddPacket(Packet_Recv pak, byte[] data)
         {
-            lock (_givePacketToClass_slimlock)
+            lock (_AddPacket_lock)
             {
-                Portal clas = CList[pak.ClassID];
-                clas.packetList1.Add(pak);
-                pak.StreamPosition = clas.rms1.Position;
+                packetList1.Add(pak);
+                pak.StreamPosition = rms1.Position;
                 if (data != null)
                 {
                     pak.PacketSize = data.Length;
-                    clas.rbw1.Write(data);
+                    rbw1.Write(data);
                 }
                 else
                 {
                     pak.PacketSize = 0;
                 }
+                if (!QueueLock)
+                {
+                    QueueLock = true;
+                    ThreadPool.QueueUserWorkItem(EventWorker);
+                }
+            }
+        }
+
+        volatile bool QueueLock = false;
+        object _EventWorker_lock = new object();
+        private void EventWorker(object threadContext)
+        {
+            
+            lock (_EventWorker_lock)
+            {
+                QueueLock = false;
+                foreach (Packet_Recv pak in GetPakets())
+                {
+                    PacketEventArgs args = new PacketEventArgs();
+                    args.lnk = pak.link;
+                    args.pak = pak;
+                    args.portal = this;
+                    OnIncomingPacket(args);
+                }
+            }
+        }
+
+        protected virtual void OnIncomingPacket(PacketEventArgs e)
+        {
+            
+            EventHandler<PacketEventArgs> handler = IncomingPacket;
+            if (handler != null)
+            {
+                //Debug.WriteLine("OnIncomingPacket called!");
+                handler(this, e);
+
             }
         }
 
@@ -90,7 +130,7 @@ namespace Vaser
         /// Get all new received data packets.
         /// </summary>
         /// <returns>a list of all packets</returns>
-        public List<Packet_Recv> GetPakets()
+        internal List<Packet_Recv> GetPakets()
         {
             packetList2.Clear();
 
@@ -122,7 +162,7 @@ namespace Vaser
             rbrTEMP = rbr2;
 
 
-            lock (_givePacketToClass_slimlock)
+            lock (_AddPacket_lock)
             {
 
                 packetList2 = packetList1;
@@ -144,18 +184,18 @@ namespace Vaser
         }
 
         /// <summary>
-        /// Send data to the client.
+        /// Send data packets to the client.
         /// </summary>
         /// <param name="lnk">the link to the client</param>
         /// <param name="con">the container you want to send. can be null.</param>
         /// <param name="ContainerID">manually set</param>
         /// <param name="ObjectID">manually set</param>
-        public void SendContainer(Link lnk, Container con, int ContainerID, int ObjectID)
+        public void SendContainer(Link lnk, Container con, ushort ContainerID, uint ObjectID)
         {
             if (lnk.IsConnected == false || lnk.bw == null) return;
             Packet_Send pak = null;
             if (con != null)
-            {  
+            {
                 pak = con.PackContainer();
                 //big datapacket dedected
                 if (pak.Counter >= Options.MaximumPacketSize)
@@ -177,7 +217,7 @@ namespace Vaser
                 {
                     lnk.bw.Write(counter);
 
-                    lnk.bw.Write(this.Cpos);
+                    lnk.bw.Write(this._PID);
                     lnk.bw.Write(ObjectID);
                     lnk.bw.Write(ContainerID);
 
@@ -189,7 +229,7 @@ namespace Vaser
                     }
                 }
             }
-            
+
 
             //big_data_sms.SetLength(0);
             //big_data_sms.Flush();
@@ -199,16 +239,18 @@ namespace Vaser
         }
 
         /// <summary>
-        /// Flush the databuffer and send all data to the clients/server.
+        /// Flush the databuffer and send all data to the client/server.
         /// </summary>
         public static void Finialize()
         {
-            List<Link> tempLinkList = Link.LinkList.ToList<Link>();
-            foreach (Link lnk in tempLinkList)
-            {
-                if (lnk != null) lnk.SendData();
-            }
-            tempLinkList.Clear();
+            Link.SendAllData();
         }
+    }
+
+    public class PacketEventArgs : EventArgs
+    {
+        public Link lnk { get; set; }
+        public Packet_Recv pak { get; set; }
+        public Portal portal { get; set; }
     }
 }

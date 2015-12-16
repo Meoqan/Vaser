@@ -6,6 +6,9 @@ using System.Threading.Tasks;
 
 namespace Vaser
 {
+    /// <summary>
+    /// Simple dataholder.
+    /// </summary>
     public class NetVector2
     {
         public float[] Data = { 0.0f, 0.0f };

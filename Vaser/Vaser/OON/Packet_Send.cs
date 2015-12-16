@@ -6,9 +6,9 @@ using System.Threading.Tasks;
 
 namespace Vaser
 {
-    public class Packet_Send
+    internal class Packet_Send
     {
-        public byte[] SendData = null;
-        public int Counter = 0;
+        internal byte[] SendData = null;
+        internal int Counter = 0;
     }
 }

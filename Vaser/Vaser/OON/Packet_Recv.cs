@@ -7,13 +7,29 @@ using System.IO;
 
 namespace Vaser
 {
+    /// <summary>
+    /// This class holds your incoming data packet.
+    /// </summary>
     public class Packet_Recv
     {
+        /// <summary>
+        /// The related link for this packet.
+        /// </summary>
         public Link link;
+        /// <summary>
+        /// The object ID
+        /// </summary>
+        public uint ObjectID = 0;
 
-        internal int ClassID = -1;
-        public int ObjectID = -1;
-        public int ContainerID = -1;
+        /// <summary>
+        /// The container ID
+        /// </summary>
+        public ushort ContainerID = 0;
+
+        internal byte ClassID = 0;
+
+        
+        
         internal long StreamPosition = -1;
         internal int PacketSize = -1;
 
@@ -26,9 +42,9 @@ namespace Vaser
 
         private void extractIDs(BinaryReader data)
         {
-            ClassID = data.ReadInt32(); //Get Class ID
-            ObjectID = data.ReadInt32(); //Get Object ID
-            ContainerID = data.ReadInt32(); //Get Container ID
+            ClassID = data.ReadByte(); //Get Class ID Len: 1 B
+            ObjectID = data.ReadUInt32(); //Get Object ID Len: 4 B
+            ContainerID = data.ReadUInt16(); //Get Container ID Len: 2 B
         }
     }
 }

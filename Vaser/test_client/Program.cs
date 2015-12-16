@@ -19,17 +19,21 @@ namespace test_client
             public string test = "test text!";
             public byte[] by = new byte[1000];
         }
+        // create new container
+        static TestContainer con1 = new TestContainer();
 
         static void Main(string[] args)
         {
 
-            // create new container
-            TestContainer con1 = new TestContainer();
+            
 
             bool online = true;
 
             //Client initalisieren
-            Portal system = new Portal();
+            PortalCollection PC = new PortalCollection();
+            Portal system = PC.CreatePortal(100);
+
+            system.IncomingPacket += OnSystemPacket;
 
             //Create a TestCert in CMD: makecert -sr LocalMachine -ss root -r -n "CN=localhost" -sky exchange -sk 123456
             // Do not use in Production | do not use localhost -> use your machinename!
@@ -68,33 +72,16 @@ namespace test_client
             _aTimer.AutoReset = true;
             _aTimer.Enabled = true;*/
             Thread.Sleep(100);
-            Link lnk1 = VaserClient.ConnectClient("localhost", 3100, VaserOptions.ModeSSL, cCollection, "localhost");
+            Link lnk1 = VaserClient.ConnectClient("localhost", 3100, VaserOptions.ModeSSL, PC, cCollection, "localhost");
 
             if (lnk1 != null) Console.WriteLine("1: successfully established connection.");
             
             //working
-            if (lnk1.Connect.StreamIsConnected) Console.WriteLine("Test. Con OK");
+            if (lnk1.IsConnected) Console.WriteLine("Test. Con OK");
             while (online)
             {
-
                 
-
-                //proceed incoming data
-                foreach (Packet_Recv pak in system.GetPakets())
-                {
-                    // [1] now you can sort the packet to the right container and object
-
-                    //unpack the packet, true if the decode was successful
-                    if (con1.UnpackContainer(pak, system))
-                    {
-                        // Console.WriteLine("PACK");
-                        system.SendContainer(pak.link, con1, 1, 1);
-                        Portal.Finialize();
-                    }
-                }
-
-                
-                Thread.Sleep(1);
+                Thread.Sleep(100);
 
                 //entfernen
                 if (lnk1.IsConnected == false) online = false;
@@ -104,6 +91,19 @@ namespace test_client
 
             Console.WriteLine("Test ended... press any key...");
             Console.ReadKey();
+        }
+
+
+
+        static void OnSystemPacket(object p, PacketEventArgs e)
+        {
+            //unpack the packet, true if the decode was successful
+            if (con1.UnpackContainer(e.pak, e.portal))
+            {
+                // Console.WriteLine("PACK");
+                e.portal.SendContainer(e.lnk, con1, 1, 1);
+                Portal.Finialize();
+            }
         }
     }
 }

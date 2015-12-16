@@ -8,7 +8,6 @@ using System.IO;
 using System.Net;
 using System.Net.Security;
 using System.Net.Sockets;
-using Vaser.global;
 using System.Security.Authentication;
 using System.Security.Principal;
 using System.Security.Cryptography.X509Certificates;
@@ -17,7 +16,7 @@ using System.Timers;
 
 namespace Vaser
 {
-    public class Connection
+    internal class Connection
     {
 
         private object _Settings_ThreadLock = new object();
@@ -34,6 +33,8 @@ namespace Vaser
         private TcpClient _SocketTCPClient;
         public volatile bool Disposed;
         public volatile bool BootupDone = false;
+
+        private PortalCollection _PCollection = null;
 
         private int bytesRead;
         private MemoryStream tmpsms = null;
@@ -74,6 +75,8 @@ namespace Vaser
         private bool _IsInSendQueue = false;
 
         private System.Timers.Timer _aTimer;
+
+        internal volatile bool _IsAccepted = false;
 
         /// <summary>
         /// the IPAdress of the remote end point
@@ -217,7 +220,7 @@ namespace Vaser
         /// <summary>
         /// Creates a new connection for processing data
         /// </summary>
-        public Connection(TcpClient client, bool _IsServer, VaserOptions Mode, X509Certificate2 Cert = null, X509Certificate2Collection cCollection = null, string targetHostname = null, VaserServer srv = null)
+        public Connection(TcpClient client, bool _IsServer, VaserOptions Mode, PortalCollection PColl, X509Certificate2 Cert = null, X509Certificate2Collection cCollection = null, string targetHostname = null, VaserServer srv = null)
         {
             IsServer = _IsServer;
 
@@ -248,6 +251,7 @@ namespace Vaser
             _aTimer.Elapsed += new ElapsedEventHandler(OnTimedEvent);
 
             _Mode = Mode;
+            _PCollection = PColl;
 
             _Cert = Cert;
             _CertCol = cCollection;
@@ -368,6 +372,8 @@ namespace Vaser
                     BootupDone = true;
                 }
 
+                _IsAccepted = true;
+                Receive();
 
                 _aTimer.Enabled = true;
 
@@ -390,8 +396,17 @@ namespace Vaser
 
             //Send();
 
-            Receive();
+            //Receive();
             //ThreadPool.QueueUserWorkItem(SendAsync);
+        }
+
+        internal void AcceptConnection()
+        {
+            if (_IsAccepted == false)
+            {
+                _IsAccepted = true;
+                Receive();
+            }
         }
 
         private byte[] _timeoutdata = BitConverter.GetBytes((int)(-1));
@@ -594,11 +609,11 @@ namespace Vaser
 
                                         if (size - Options.PacketHeadSize == 0)
                                         {
-                                            Portal.givePacketToClass(new Packet_Recv(link, _rbr2), null);
+                                            _PCollection.GivePacketToClass(new Packet_Recv(link, _rbr2), null);
                                         }
                                         else
                                         {
-                                            Portal.givePacketToClass(new Packet_Recv(link, _rbr2), _rbr2.ReadBytes(size - Options.PacketHeadSize));
+                                            _PCollection.GivePacketToClass(new Packet_Recv(link, _rbr2), _rbr2.ReadBytes(size - Options.PacketHeadSize));
                                         }
 
                                         mode = 0;
@@ -660,7 +675,7 @@ namespace Vaser
             }
             catch (Exception e)
             {
-                Debug.WriteLine(e.ToString());
+                //Debug.WriteLine(e.ToString());
             }
         }
 

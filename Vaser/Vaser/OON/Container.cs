@@ -6,11 +6,14 @@ using System.Threading.Tasks;
 using System.IO;
 using System.Reflection;
 using System.Security;
-using Vaser.global;
 using System.Diagnostics;
 
 namespace Vaser
 {
+    /// <summary>
+    /// This class is for inheritance your data packets.
+    /// use: public class my_datapacket : Container
+    /// </summary>
     public class Container
     {
         private Packet_Send _SendPacket = new Packet_Send();
@@ -50,7 +53,7 @@ namespace Vaser
         }
 
         /// <summary>
-        /// free all Container resources
+        /// Free all container resources
         /// </summary>
         public void Dispose()
         {

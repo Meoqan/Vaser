@@ -23,6 +23,12 @@ namespace test_server
             public byte[] by = new byte[1000];
         }
 
+        // create new container
+        static TestContainer con1 = new TestContainer();
+        static int testmode = 0;
+        static Stopwatch watch = new Stopwatch();
+        static Link test1 = null;
+        static Portal system = null;
         static void Main(string[] args)
         {
 
@@ -31,18 +37,18 @@ namespace test_server
             Console.WriteLine("");
 
             Console.WriteLine("Creating container: TestContainer");
-            // create new container
-            TestContainer con1 = new TestContainer();
+
 
             //create connection managing lists
-            
-            Link test1 = null;
+
 
 
             //initialize the server
             Console.WriteLine("Creating portal: system");
-            Portal system = new Portal();
+            PortalCollection PC = new PortalCollection();
+            system = PC.CreatePortal(100);
 
+            system.IncomingPacket += OnSystemPacket;
 
             //Create a TestCert in CMD: makecert -sr LocalMachine -ss root -r -n "CN=localhost" -sky exchange -sk 123456
             // Do not use in Production | do not use localhost -> use your machinename!
@@ -80,13 +86,13 @@ namespace test_server
             //start the server
             Console.WriteLine("Creating server: IPAddress any, Port 3100, VaserMode ModeSSL");
 
-            VaserServer Server1 = new VaserServer(System.Net.IPAddress.Any, 3100, VaserOptions.ModeSSL, cert);
+            VaserServer Server1 = new VaserServer(System.Net.IPAddress.Any, 3100, VaserOptions.ModeSSL, PC, cert);
+            Server1.NewLink += OnNewLink;
 
 
-            Stopwatch watch = new Stopwatch();
 
             Console.WriteLine("");
-            int testmode = 0;
+
 
             bool online = true;
             //working
@@ -99,92 +105,7 @@ namespace test_server
                         Console.WriteLine("Waiting for Connection...");
                         testmode = 1;
                         break;
-                    case 1:
 
-
-                        Link lnk1 = Server1.GetNewLink();
-                        if (lnk1 != null)
-                        {
-                            test1 = lnk1;
-                            Console.WriteLine("New client connected: remote IPAdress {0} , remote Identity: {1}", lnk1.IPv4Address.ToString(), lnk1.UserName);
-                            lnk1.Accept();
-
-                            Console.WriteLine("Reading metadata from Link:");
-                            Console.WriteLine("lnk1.Connect.StreamIsConnected is {0}", lnk1.Connect.StreamIsConnected.ToString());
-                            Console.WriteLine("lnk1.Connect.ThreadIsRunning is {0}", lnk1.Connect.ThreadIsRunning.ToString());
-                            Console.WriteLine("lnk1.Connect.IPv4Address is {0}", lnk1.Connect.IPv4Address.ToString());
-
-                            testmode = 2;
-                            Console.WriteLine("Send 10000 Packets....");
-                            con1.test = "Message ";
-                            for (int x = 0; x < 10000; x++)
-                            {
-                                con1.ID++;
-                                system.SendContainer(test1, con1, 1, 1);
-                                Portal.Finialize();
-                            }
-                            
-                        }
-
-                        break;
-                    case 2:
-
-                        
-
-                        foreach (Packet_Recv pak in system.GetPakets())
-                        {
-                            // [1] now you can sort the packet to the right container and object
-                            //Console.WriteLine("the packet has the container ID {0} and is for the object ID {1} ", pak.ContainerID, pak.ObjectID);
-
-                            //unpack the packet, true if the decode was successful
-                            if (con1.UnpackContainer(pak, system))
-                            {
-                                if (watch.IsRunning == false) watch.Start();
-
-                                if (con1.ID == 1000) Console.WriteLine("Recived " + con1.ID);
-                                if (con1.ID == 2500) Console.WriteLine("Recived " + con1.ID);
-                                if (con1.ID == 5000) Console.WriteLine("Recived " + con1.ID);
-                                if (con1.ID == 7500) Console.WriteLine("Recived " + con1.ID);
-                                if (con1.ID == 10000)
-                                {
-                                    watch.Stop();
-                                    Console.WriteLine("Recived " + con1.ID);
-
-                                    Console.WriteLine("Time taken: {0} Milliseconds", watch.ElapsedMilliseconds.ToString());
-                                    Console.WriteLine("Transferred: {0} Mbytes", (con1.by.Length * 100000.0) / 1024.0 / 1024.0);
-                                    Console.WriteLine("Mirror Transfer rate: {0} Mbytes/second", (1000.0 / (int)watch.ElapsedMilliseconds) * ((con1.by.Length * 100000.0) / 1024.0 / 1024.0));
-                                    Console.WriteLine("start ping test...");
-                                    
-                                    
-                                    
-                                    con1.ID = 0;
-                                    watch.Reset();
-
-                                    testmode = 3;
-                                    system.SendContainer(test1, con1, 1, 1);
-                                    Portal.Finialize();
-                                    watch.Start();
-                                    
-                                }
-                            }
-                        }
-
-                        break;
-
-                    case 3:
-
-                        foreach (Packet_Recv pak in system.GetPakets())
-                        {
-                            watch.Stop();
-
-                            Console.WriteLine("responsetime is: {0} Milliseconds", watch.ElapsedMilliseconds.ToString());
-
-                            Console.WriteLine("Try to close the connection...");
-                            testmode = 4;
-                        }
-
-                        
-                        break;
                     case 4:
                         test1.Dispose();
                         Console.WriteLine("Closed");
@@ -201,11 +122,91 @@ namespace test_server
             //close Server
             Console.WriteLine("Close Server");
             Server1.Stop();
-            
+
 
 
             Console.WriteLine("Test ended. Press any key...");
             Console.ReadKey();
         }
+
+
+        static void OnNewLink(object p, LinkEventArgs e)
+        {
+
+            test1 = e.lnk;
+            Console.WriteLine("New client connected: remote IPAdress {0} , remote Identity: {1}", e.lnk.IPv4Address.ToString(), e.lnk.UserName);
+            e.lnk.Accept();
+
+            Console.WriteLine("Reading metadata from Link:");
+            Console.WriteLine("lnk1.Connect.StreamIsConnected is {0}", e.lnk.IsConnected.ToString());
+            Console.WriteLine("lnk1.Connect.IPv4Address is {0}", e.lnk.IPv4Address.ToString());
+
+            testmode = 2;
+            Console.WriteLine("Send 10000 Packets....");
+            con1.test = "Message ";
+            for (int x = 0; x < 10000; x++)
+            {
+                con1.ID++;
+                system.SendContainer(test1, con1, 1, 1);
+                Portal.Finialize();
+            }
+
+        }
+
+        static void OnSystemPacket(object p, PacketEventArgs e)
+        {
+            //Debug.WriteLine("Event called!");
+            switch (testmode)
+            {
+                case 2:
+
+                    //unpack the packet, true if the decode was successful
+                    if (con1.UnpackContainer(e.pak, e.portal))
+                    {
+                        if (watch.IsRunning == false) watch.Start();
+
+                        if (con1.ID == 1000) Console.WriteLine("Recived " + con1.ID);
+                        if (con1.ID == 2500) Console.WriteLine("Recived " + con1.ID);
+                        if (con1.ID == 5000) Console.WriteLine("Recived " + con1.ID);
+                        if (con1.ID == 7500) Console.WriteLine("Recived " + con1.ID);
+                        if (con1.ID == 10000)
+                        {
+                            watch.Stop();
+                            Console.WriteLine("Recived " + con1.ID);
+
+                            Console.WriteLine("Time taken: {0} Milliseconds", watch.ElapsedMilliseconds.ToString());
+                            Console.WriteLine("Transferred: {0} Mbytes", (con1.by.Length * 100000.0) / 1024.0 / 1024.0);
+                            Console.WriteLine("Mirror Transfer rate: {0} Mbytes/second", (1000.0 / (int)watch.ElapsedMilliseconds) * ((con1.by.Length * 100000.0) / 1024.0 / 1024.0));
+                            Console.WriteLine("start ping test...");
+
+
+
+                            con1.ID = 0;
+                            watch.Reset();
+
+                            testmode = 3;
+                            e.portal.SendContainer(test1, con1, 1, 1);
+                            Portal.Finialize();
+                            watch.Start();
+
+
+                        }
+                    }
+                    break;
+                case 3:
+
+                    watch.Stop();
+
+                    Console.WriteLine("responsetime is: {0} Milliseconds", watch.ElapsedMilliseconds.ToString());
+
+                    Console.WriteLine("Try to close the connection...");
+                    testmode = 4;
+
+
+
+                    break;
+            }
+        }
     }
 }
+
