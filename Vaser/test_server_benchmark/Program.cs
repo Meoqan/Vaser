@@ -34,10 +34,6 @@ namespace test_server_benchmark
 
         static void Main(string[] args)
         {
-            
-
-            bool online = true;
-
             //Client initalisieren
             PortalCollection PC = new PortalCollection();
             system = PC.CreatePortal(100);
@@ -85,7 +81,6 @@ namespace test_server_benchmark
             // the last 2 digits are manually set [1]
             object_counter++;
             system.SendContainer(e.lnk, con3, 1, object_counter);
-            Portal.Finialize();
 
         }
 
@@ -106,7 +101,6 @@ namespace test_server_benchmark
             // the last 2 digits are manually set [1]
             object_counter++;
             system.SendContainer(e.lnk, con4, 1, object_counter);
-            Portal.Finialize();
 
         }
 
@@ -139,7 +133,6 @@ namespace test_server_benchmark
                 //Console.WriteLine("Pong!  CounterID" + con2.ID + " Object:" + pak.ObjectID);
                 // the last 2 digits are manually set [1]
                 e.portal.SendContainer(e.lnk, con2, 1, e.pak.ObjectID);
-                Portal.Finialize();
             }
             else
             {

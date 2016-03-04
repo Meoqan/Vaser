@@ -12,7 +12,7 @@ namespace Vaser
     public class PortalCollection
     {
         private object _ListLock = new object();
-        private Portal[] PortalArray = new Portal[256];
+        internal Portal[] PortalArray = new Portal[256];
 
         /// <summary>
         /// Creates a new portal.
@@ -35,9 +35,6 @@ namespace Vaser
         }
         
         internal object _GivePacketToClass_lock = new object();
-
-        //internal static void lock_givePacketToClass() { _givePacketToClass_slimlock.Wait(); }
-        //internal static void release_givePacketToClass() { _givePacketToClass_slimlock.Release(); }
 
         internal void GivePacketToClass(Packet_Recv pak, byte[] data)
         {

@@ -42,7 +42,7 @@ namespace test_client_benchmark
             while (online)
             {
 
-                while (Livinglist.Count < 50)
+                while (Livinglist.Count < 500)
                 {
                     Link lnk1 = VaserClient.ConnectClient("localhost", 3100, VaserOptions.ModeNotEncrypted, PC);
                     lnk1.Disconnecting += OnDisconnectingLink;
@@ -97,13 +97,12 @@ namespace test_client_benchmark
                     {
                         if (con2.ID < 0) Console.WriteLine("Decode error: " + con2.ID);
                         //if (con2.ID > 100) Console.WriteLine("Decode error: " + con2.ID);
-                        if (con2.ID < 5000)
+                        if (con2.ID < 500)
                         {
                             //Console.WriteLine("Ping! " + counter + " CounterID" + con2.ID + " Object:" + pak.ObjectID);
 
                             con2.ID += 1;
                             e.portal.SendContainer(e.pak.link, con2, 1, e.pak.ObjectID);
-                            Portal.Finialize();
                         }
                         else
                         {

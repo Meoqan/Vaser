@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.Threading;
 using System.IO;
 using System.Net;
+using System.Diagnostics;
 
 namespace Vaser
 {
@@ -24,8 +25,22 @@ namespace Vaser
         private Connection _Connect;
         internal volatile bool Valid = false;
         private volatile bool Teardown = false;
-        private MemoryStream _ms = null;
-        internal BinaryWriter bw = null;
+        public volatile bool Disposed;
+        private object _DisposeLock = new object();
+
+        /// <summary>
+        /// Input sending data from portal
+        /// </summary>
+        internal Queue<Packet_Send>[] SendDataPortalArray = new Queue<Packet_Send>[256];
+
+        /// <summary>
+        /// merged mapping for sending (removed empty spaces for reduced QoS operations)
+        /// </summary>
+        internal Queue<Packet_Send>[] SendDataPortalArrayOUTPUT = null;
+
+
+        //private MemoryStream _ms = null;
+        //internal BinaryWriter bw = null;
 
         private object _AttachedObject = null;
         private uint _AttachedID = 0;
@@ -45,6 +60,11 @@ namespace Vaser
         /// </summary>
         public event EventHandler<LinkEventArgs> Disconnecting;
 
+        /// <summary>
+        /// EventHandler for empty buffer
+        /// triggers an event from when the buffer is empty
+        /// </summary>
+        public event EventHandler<LinkEventArgs> EmptyBuffer;
 
         /// <summary>
         /// Any to this link related object can be safed here. This variable is threadsafe and is free to use.
@@ -255,25 +275,7 @@ namespace Vaser
                 }
             }
         }
-
-        /*public bool Valid
-        {
-            get
-            {
-                lock (_Connection_Lock)
-                {
-                    return _Valid;
-                }
-            }
-            set
-            {
-                lock (_Connection_Lock)
-                {
-                    _Valid = value;
-                }
-            }
-        }*/
-
+        
         public bool IsConnected
         {
             get
@@ -294,12 +296,30 @@ namespace Vaser
             }
         }
 
-        public Link()
+        public Link(PortalCollection Pcol)
         {
             lock (SendData_Lock)
             {
-                _ms = new MemoryStream();
-                bw = new BinaryWriter(_ms);
+                int counter = 0;
+                for (int x = 0; x < 256; x++)
+                {
+                    if (Pcol.PortalArray[x] != null) counter++;
+                }
+                Debug.WriteLine("Portal counter is "+ counter);
+                SendDataPortalArrayOUTPUT = new Queue<Packet_Send>[counter];
+
+                counter = 0;
+                for (int x = 0; x < 256; x++)
+                {
+                    if (Pcol.PortalArray[x] != null)
+                    {
+                        SendDataPortalArray[x] = new Queue<Packet_Send>();
+
+                        SendDataPortalArrayOUTPUT[counter] = SendDataPortalArray[x];
+                        Debug.WriteLine("Mapping Portal ID from "+x+" to "+ counter);
+                        counter++;
+                    }
+                }
             }
         }
 
@@ -316,18 +336,7 @@ namespace Vaser
 
             }
         }
-
-        internal static void SendAllData()
-        {
-            lock (_Static_ThreadLock)
-            {
-                foreach (Link lnk in _LinkList)
-                {
-                    lnk.SendData();
-                }
-            }
-        }
-
+        
         protected virtual void OnDisconnectingLink(LinkEventArgs e)
         {
 
@@ -339,79 +348,75 @@ namespace Vaser
             }
         }
 
+        protected internal virtual void OnEmptyBuffer(LinkEventArgs e)
+        {
+
+            EventHandler<LinkEventArgs> handler = EmptyBuffer;
+            if (handler != null)
+            {
+                //Console.WriteLine("OnEmptyBuffer called!");
+                handler(this, e);
+            }
+        }
+
 
         /// <summary>
         /// Close the connection and free all resources.
         /// </summary>
         public void Dispose()
         {
-            SendData();
-
-            Connect.Stop();
-
-            lock (_Static_ThreadLock)
+            lock(_DisposeLock)
             {
-                if (_LinkList.Contains(this)) _LinkList.Remove(this);
-            }
-
-            lock (SendData_Lock)
-            {
-                if (bw != null) bw.Dispose();
-                if (_ms != null) _ms.Dispose();
-                if (bw != null) bw = null;
-                if (_ms != null) _ms = null;
-            }
-
-            Connect.Dispose();
-
-            if (!Teardown)
-            {
-                
-                Teardown = true;
-                LinkEventArgs args = new LinkEventArgs();
-                args.lnk = this;
-                OnDisconnectingLink(args);
-            }
-
-            
-        }
-
-        
-
-        internal void SendData()
-        {
-            lock (SendData_Lock)
-            {
-                if (Connect != null && _ms != null)
+                //SendData();
+                //Debug.WriteLine("Link.Dispose called");
+                if (Disposed)
                 {
-                    if (_ms.Length > 0)
+                    //Debug.WriteLine("Link.Dispose abort");
+                    return;
+                }
+                else
+                {
+                    Disposed = true;
+                }
+
+                Connect.Stop();
+
+                lock (_Static_ThreadLock)
+                {
+                    if (_LinkList.Contains(this)) _LinkList.Remove(this);
+                }
+
+                lock (SendData_Lock)
+                {
+                    for (int x = 0; x < SendDataPortalArray.Length; x++)
                     {
-                        //Debug.WriteLine("Link.SendData byte wirtten: " + _ms.Length);
-                        Connect.SendData(_ms.ToArray());
-
-
-
-                        //_ms.SetLength(0);
-                        //_ms.Flush();
-                        //bw.Flush();
-
-                        if (_ms.Length < 10000000)
+                        if (SendDataPortalArray[x] != null)
                         {
-                            _ms.SetLength(0);
-                            _ms.Flush();
-                            bw.Flush();
-                        }
-                        else
-                        {
-                            _ms.Dispose();
-                            bw.Dispose();
-                            _ms = new MemoryStream();
-                            bw = new BinaryWriter(_ms);
-                            //GC.Collect();
+                            SendDataPortalArray[x].Clear();
+                            SendDataPortalArray[x] = null;
                         }
                     }
+
+                    for (int x = 0; x < SendDataPortalArrayOUTPUT.Length; x++)
+                    {
+                        SendDataPortalArrayOUTPUT[x] = null;
+                    }
                 }
+
+                Connect.Dispose();
+                //Connect = null;
+
+                if (!Teardown)
+                {
+
+                    Teardown = true;
+                    LinkEventArgs args = new LinkEventArgs();
+                    args.lnk = this;
+                    OnDisconnectingLink(args);
+                }
+
             }
         }
+        
     }
 }

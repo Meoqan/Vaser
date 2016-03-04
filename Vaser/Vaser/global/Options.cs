@@ -12,6 +12,7 @@ namespace Vaser
         public static volatile bool Operating = true;
         public static readonly int MaximumPacketSize = 65007;
         public static readonly int PacketHeadSize = 7;
-        
+        public static int LinkSendBufferSize = 1024;
+
     }
 }

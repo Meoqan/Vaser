@@ -23,12 +23,6 @@ namespace Vaser
 
         internal int counter = 0;
 
-        //MemoryStream big_data_sms = null;
-        //BinaryWriter big_data_sbw = null;
-
-        //MemoryStream sms = null;
-        //BinaryWriter sbw = null;
-
         /// <summary>
         /// EventHandler for incoming packets.
         /// </summary>
@@ -49,6 +43,9 @@ namespace Vaser
         internal BinaryWriter rbw2 = null;
         internal BinaryReader rbr2 = null;
 
+        internal MemoryStream _sendMS = null;
+        internal BinaryWriter _sendBW = null;
+
         /// <summary>
         /// Creates a new portal. Please use 'MyPortalCollection.CreatePortal(...)' instead.
         /// </summary>
@@ -65,6 +62,9 @@ namespace Vaser
             rms2 = new MemoryStream();
             rbw2 = new BinaryWriter(rms2);
             rbr2 = new BinaryReader(rms2);
+
+            _sendMS = new MemoryStream();
+            _sendBW = new BinaryWriter(_sendMS);
 
             _PCollection = PColl;
             _PID = PID;
@@ -148,13 +148,10 @@ namespace Vaser
                 rms2 = new MemoryStream();
                 rbw2 = new BinaryWriter(rms2);
                 rbr2 = new BinaryReader(rms2);
-                //GC.Collect();
+
             }
-            //rms2.SetLength(0);
-            //rms2.Flush();
-            //rbw2.Flush();
 
-
+            
             //switch the packetstream
             packetListTEMP = packetList2;
             rmsTEMP = rms2;
@@ -183,6 +180,9 @@ namespace Vaser
             return packetList2;
         }
 
+
+        private object SendContainer_lock = new object();
+
         /// <summary>
         /// Send data packets to the client.
         /// </summary>
@@ -190,61 +190,94 @@ namespace Vaser
         /// <param name="con">the container you want to send. can be null.</param>
         /// <param name="ContainerID">manually set</param>
         /// <param name="ObjectID">manually set</param>
-        public void SendContainer(Link lnk, Container con, ushort ContainerID, uint ObjectID)
+        /// <param name="CallEmptyBufferEvent">if true raise an event</param>
+        public void SendContainer(Link lnk, Container con, ushort ContainerID, uint ObjectID, bool CallEmptyBufferEvent = false)
         {
-            if (lnk.IsConnected == false || lnk.bw == null) return;
-            Packet_Send pak = null;
-            if (con != null)
-            {
-                pak = con.PackContainer();
-                //big datapacket dedected
-                if (pak.Counter >= Options.MaximumPacketSize)
+            try {
+                //Operating threadsave
+                lock (SendContainer_lock)
                 {
-                    return;
-                }
-                else
-                {
-                    counter = (ushort)pak.Counter;
-                }
-            }
+                    if (lnk.IsConnected == false || _sendBW == null) return;
 
-            counter += Options.PacketHeadSize;
-
-            lock (lnk.SendData_Lock)
-            {
-
-                if (lnk.bw != null)
-                {
-                    lnk.bw.Write(counter);
-
-                    lnk.bw.Write(this._PID);
-                    lnk.bw.Write(ObjectID);
-                    lnk.bw.Write(ContainerID);
-
-
+                    counter = 0;
+                    Packet_Send spacket = null;
                     if (con != null)
                     {
-                        lnk.bw.Write(pak.SendData);
-                        //Debug.WriteLine("Protal.SendContainer byte wirtten: " + pak.SendData.Length);
+                        _sendMS.Position = Options.PacketHeadSize + 4;
+
+                        spacket = con.PackContainer(_sendBW, _sendMS);
+                        //big datapacket dedected
+                        if (_sendMS.Position >= Options.MaximumPacketSize)
+                        {
+                            return;
+                        }
+                        else
+                        {
+                            counter = (ushort)_sendMS.Position - 4;
+                        }
                     }
+
+                    _sendMS.Position = 0;
+
+                    if (con == null)
+                    {
+                        counter += Options.PacketHeadSize;
+                    }
+
+                    if (_sendBW != null)
+                    {
+                        //Debug.WriteLine("Counter: " + counter);
+                        _sendBW.Write(counter);
+
+                        _sendBW.Write(this._PID);
+                        _sendBW.Write(ObjectID);
+                        _sendBW.Write(ContainerID);
+
+                    }
+
+                    //Operating threadsave
+                    lock (lnk.SendData_Lock)
+                    {
+                        if (lnk.SendDataPortalArray[_PID] != null)
+                        {
+                            //byte[] sendb = ;
+                            if (spacket == null)
+                            {
+                                spacket = new Packet_Send(_sendMS.ToArray(), CallEmptyBufferEvent);
+                            }
+                            else
+                            {
+                                spacket._SendData = _sendMS.ToArray();
+                                spacket._CallEmpybuffer = CallEmptyBufferEvent;
+                            }
+
+
+
+                            lnk.SendDataPortalArray[_PID].Enqueue(spacket);
+                            lnk.Connect.SendData();
+
+                        }
+                    }
+
+                    //reset 
+                    _sendMS.SetLength(0);
+                    _sendMS.Flush();
+
                 }
+            }catch(Exception es)
+            {
+                Debug.WriteLine("Portal.SendContainer()  > " + es.ToString());
             }
-
-
-            //big_data_sms.SetLength(0);
-            //big_data_sms.Flush();
-            //big_data_sbw.Flush();
-
-            counter = 0;
         }
 
-        /// <summary>
-        /// Flush the databuffer and send all data to the client/server.
-        /// </summary>
-        public static void Finialize()
+        public static string ByteArrayToString(byte[] ba)
         {
-            Link.SendAllData();
+            StringBuilder hex = new StringBuilder(ba.Length * 2);
+            foreach (byte b in ba)
+                hex.AppendFormat("{0:x2}", b);
+            return hex.ToString();
         }
+
     }
 
     public class PacketEventArgs : EventArgs

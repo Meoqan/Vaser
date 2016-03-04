@@ -17,7 +17,7 @@ namespace test_client
             //only public, nonstatic and standard datatypes can be transmitted
             public int ID = 1;
             public string test = "test text!";
-            public byte[] by = new byte[1000];
+            public byte[] by = new byte[10000];
         }
         // create new container
         static TestContainer con1 = new TestContainer();
@@ -73,6 +73,7 @@ namespace test_client
             _aTimer.Enabled = true;*/
             Thread.Sleep(100);
             Link lnk1 = VaserClient.ConnectClient("localhost", 3100, VaserOptions.ModeSSL, PC, cCollection, "localhost");
+            lnk1.EmptyBuffer += OnEmptyBuffer;
 
             if (lnk1 != null) Console.WriteLine("1: successfully established connection.");
             
@@ -93,7 +94,10 @@ namespace test_client
             Console.ReadKey();
         }
 
-
+        static void OnEmptyBuffer(object p, LinkEventArgs e)
+        {
+            //Console.WriteLine("OnEmptyBuffer called!");
+        }
 
         static void OnSystemPacket(object p, PacketEventArgs e)
         {
@@ -102,7 +106,7 @@ namespace test_client
             {
                 // Console.WriteLine("PACK");
                 e.portal.SendContainer(e.lnk, con1, 1, 1);
-                Portal.Finialize();
+                //Portal.Finialize();
             }
         }
     }

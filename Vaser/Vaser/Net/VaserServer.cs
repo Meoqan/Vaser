@@ -285,6 +285,7 @@ namespace Vaser
                     {
                         Con.Stop();
                     }
+                    _ConnectionList.Clear();
                 }
 
                 _TCPListener.Stop();
@@ -314,12 +315,12 @@ namespace Vaser
             if (con == null) return;
             lock (_ConnectionList_ThreadLock)
             {
-                _ConnectionList.Remove(con);
+                if(_ConnectionList.Contains(con)) _ConnectionList.Remove(con);
             }
 
             lock (_DisconnectingLinkList_ThreadLock)
             {
-                _DisconnectingLinkList.Add(con.link);
+                if (!_DisconnectingLinkList.Contains(con.link)) _DisconnectingLinkList.Add(con.link);
             }
 
             if (!DisconnectingQueueLock)
@@ -328,32 +329,7 @@ namespace Vaser
                 ThreadPool.QueueUserWorkItem(DisconnectingEventWorker);
             }
         }
-
-
         
-
-        /*// <summary>
-        /// Get a new Connected Client.
-        /// </summary>
-        /// <returns>Returns null if no new client is connected</returns>
-        public Link GetNewLink()
-        {
-            lock (_ThreadLock)
-            {
-                Link lnk = null;
-
-                if (NewLinkList.Count > 0)
-                {
-                    lnk = NewLinkList[0];
-                    NewLinkList.Remove(lnk);
-                }
-
-                return lnk;
-            }
-        }*/
-
-
-
         volatile bool NewQueueLock = false;
         //object _EventWorker_lock = new object();
         private void NewEventWorker(object threadContext)
@@ -388,19 +364,27 @@ namespace Vaser
         //object _EventWorker_lock = new object();
         private void DisconnectingEventWorker(object threadContext)
         {
+            List<Link> templist = null;
 
             lock (_DisconnectingLinkList_ThreadLock)
             {
                 DisconnectingQueueLock = false;
-                foreach (Link lnk in _DisconnectingLinkList)
-                {
-                    LinkEventArgs args = new LinkEventArgs();
-                    args.lnk = lnk;
 
-                    OnDisconnectingLink(args);
-                }
-                _DisconnectingLinkList.Clear();
+                templist = _DisconnectingLinkList;
+                _DisconnectingLinkList = new List<Link>();
             }
+
+            foreach (Link lnk in templist)
+            {
+                lnk.Dispose();
+
+                LinkEventArgs args = new LinkEventArgs();
+                args.lnk = lnk;
+
+                OnDisconnectingLink(args);
+            }
+            templist.Clear();
+
         }
 
         protected virtual void OnDisconnectingLink(LinkEventArgs e)

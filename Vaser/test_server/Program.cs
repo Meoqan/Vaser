@@ -20,11 +20,11 @@ namespace test_server
             public int ID = 1;
             public string test = "test text!";
 
-            public byte[] by = new byte[1000];
+            public byte[] by = new byte[10000];
         }
 
         // create new container
-        static TestContainer con1 = new TestContainer();
+        
         static int testmode = 0;
         static Stopwatch watch = new Stopwatch();
         static Link test1 = null;
@@ -129,30 +129,43 @@ namespace test_server
             Console.ReadKey();
         }
 
+        static object Buffer_lock = new object();
 
+        static TestContainer con2 = new TestContainer();
         static void OnNewLink(object p, LinkEventArgs e)
         {
 
             test1 = e.lnk;
             Console.WriteLine("New client connected: remote IPAdress {0} , remote Identity: {1}", e.lnk.IPv4Address.ToString(), e.lnk.UserName);
-            e.lnk.Accept();
 
+            e.lnk.EmptyBuffer += OnEmptyBuffer;
+            e.lnk.Accept();
+            
             Console.WriteLine("Reading metadata from Link:");
             Console.WriteLine("lnk1.Connect.StreamIsConnected is {0}", e.lnk.IsConnected.ToString());
             Console.WriteLine("lnk1.Connect.IPv4Address is {0}", e.lnk.IPv4Address.ToString());
 
             testmode = 2;
-            Console.WriteLine("Send 10000 Packets....");
-            con1.test = "Message ";
-            for (int x = 0; x < 10000; x++)
-            {
-                con1.ID++;
-                system.SendContainer(test1, con1, 1, 1);
-                Portal.Finialize();
-            }
+            Console.WriteLine("Send 100000 Packets....");
+            con2.test = "Message ";
 
+            try {
+                lock (Buffer_lock)
+                {
+                    for (int x = 0; x < 10; x++)
+                    {
+                        con2.ID++;
+                        system.SendContainer(test1, con2, 1, 1, true);
+                    }
+                    //Portal.Finialize();
+                }
+            }catch(Exception es)
+            {
+                Console.WriteLine(es.ToString());
+            }
         }
 
+        static TestContainer con3 = new TestContainer();
         static void OnSystemPacket(object p, PacketEventArgs e)
         {
             //Debug.WriteLine("Event called!");
@@ -161,32 +174,32 @@ namespace test_server
                 case 2:
 
                     //unpack the packet, true if the decode was successful
-                    if (con1.UnpackContainer(e.pak, e.portal))
+                    if (con3.UnpackContainer(e.pak, e.portal))
                     {
                         if (watch.IsRunning == false) watch.Start();
 
-                        if (con1.ID == 1000) Console.WriteLine("Recived " + con1.ID);
-                        if (con1.ID == 2500) Console.WriteLine("Recived " + con1.ID);
-                        if (con1.ID == 5000) Console.WriteLine("Recived " + con1.ID);
-                        if (con1.ID == 7500) Console.WriteLine("Recived " + con1.ID);
-                        if (con1.ID == 10000)
+                        if (con3.ID == 10000) Console.WriteLine("Recived " + con3.ID);
+                        if (con3.ID == 25000) Console.WriteLine("Recived " + con3.ID);
+                        if (con3.ID == 50000) Console.WriteLine("Recived " + con3.ID);
+                        if (con3.ID == 75000) Console.WriteLine("Recived " + con3.ID);
+                        if (con3.ID == 100000)
                         {
                             watch.Stop();
-                            Console.WriteLine("Recived " + con1.ID);
+                            Console.WriteLine("Recived " + con3.ID);
 
                             Console.WriteLine("Time taken: {0} Milliseconds", watch.ElapsedMilliseconds.ToString());
-                            Console.WriteLine("Transferred: {0} Mbytes", (con1.by.Length * 100000.0) / 1024.0 / 1024.0);
-                            Console.WriteLine("Mirror Transfer rate: {0} Mbytes/second", (1000.0 / (int)watch.ElapsedMilliseconds) * ((con1.by.Length * 100000.0) / 1024.0 / 1024.0));
+                            Console.WriteLine("Transferred: {0} Mbytes", (con3.by.Length * 100000.0) / 1024.0 / 1024.0);
+                            Console.WriteLine("Mirror Transfer rate: {0} Mbytes/second", (1000.0 / (int)watch.ElapsedMilliseconds) * ((con3.by.Length * 100000.0) / 1024.0 / 1024.0));
                             Console.WriteLine("start ping test...");
 
 
 
-                            con1.ID = 0;
+                            con3.ID = 0;
                             watch.Reset();
 
                             testmode = 3;
-                            e.portal.SendContainer(test1, con1, 1, 1);
-                            Portal.Finialize();
+                            e.portal.SendContainer(test1, con3, 1, 1);
+                            //Portal.Finialize();
                             watch.Start();
 
 
@@ -205,6 +218,23 @@ namespace test_server
 
 
                     break;
+            }
+        }
+
+        static void OnEmptyBuffer(object p, LinkEventArgs e)
+        {
+            //Console.WriteLine("OnEmptyBuffer called!");
+            lock (Buffer_lock)
+            {
+                for (int x = 0; x < 10; x++)
+                {
+                    if (con2.ID < 100000)
+                    {
+                        con2.ID++;
+                        system.SendContainer(test1, con2, 1, 1, true);
+                    }
+                }
+                //Portal.Finialize();
             }
         }
     }

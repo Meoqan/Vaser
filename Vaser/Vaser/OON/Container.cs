@@ -16,7 +16,7 @@ namespace Vaser
     /// </summary>
     public class Container
     {
-        private Packet_Send _SendPacket = new Packet_Send();
+        private Packet_Send _SendPacket = null;
         private List<racefield> _FieldList = new List<racefield>();
 
         private MemoryStream _ms = null;
@@ -46,8 +46,8 @@ namespace Vaser
 
         public Container()
         {
-            _ms = new MemoryStream();
-            _bw = new BinaryWriter(_ms);
+            //_ms = new MemoryStream();
+            //_bw = new BinaryWriter(_ms);
 
             ScanObjects();
         }
@@ -57,8 +57,8 @@ namespace Vaser
         /// </summary>
         public void Dispose()
         {
-            _bw.Dispose();
-            _ms.Dispose();
+            _bw = null;
+            _ms = null;
             _FieldList.Clear();
 
         }
@@ -89,31 +89,20 @@ namespace Vaser
             }
         }
 
-        internal Packet_Send PackContainer()
+        internal Packet_Send PackContainer(BinaryWriter bwpc, MemoryStream mspc)
         {
-            _SendPacket = new Packet_Send();
-            
-            if (_ms.Length < 10000000)
-            {
-                _ms.SetLength(0);
-                _ms.Flush();
-                _bw.Flush();
-            }
-            else
-            {
-                _ms.Dispose();
-                _bw.Dispose();
-                _ms = new MemoryStream();
-                _bw = new BinaryWriter(_ms);
-            }
-            
+            _SendPacket = new Packet_Send(null, false);
 
+            //write direct into Portalstream
+            _bw = bwpc;
+            _ms = mspc;
             foreach (racefield field in _FieldList)
             {
                 field.wd(field.FI);
-                //Write(field.FI.GetValue(this));
             }
-            _SendPacket.SendData = _ms.ToArray();
+            // set to null, saftey first
+            _bw = null;
+            _ms = null;
 
             return _SendPacket;
         }
@@ -138,7 +127,7 @@ namespace Vaser
                 return true;
             }catch(Exception e)
             {
-                Debug.WriteLine("Vaser packet decode error: ClassID> " + pak.ClassID + " ContainerID> " + pak.ContainerID + " ObjectID> " + pak.ObjectID + " Packetsize> " + pak.PacketSize + " StreamPosition> " + pak.StreamPosition + " MEM L> " + portal.rms2.Length + " P> " + portal.rms2.Position);
+                Debug.WriteLine("Vaser packet decode error: ClassID> " + pak.ClassID + " ContainerID> " + pak.ContainerID + " ObjectID> " + pak.ObjectID + " Packetsize> " + pak.PacketSize + " StreamPosition> " + pak.StreamPosition + " MEM L> " + portal.rms2.Length + " P> " + portal.rms2.Position +"  ERROR> "+ e.ToString());
                 return false;
             }
         }
