@@ -42,7 +42,7 @@ namespace test_client_benchmark
             while (online)
             {
 
-                while (Livinglist.Count < 500)
+                while (Livinglist.Count < 10)
                 {
                     Link lnk1 = VaserClient.ConnectClient("localhost", 3100, VaserOptions.ModeNotEncrypted, PC);
                     lnk1.Disconnecting += OnDisconnectingLink;

@@ -47,6 +47,10 @@ namespace Vaser
 
         private object _WorkAtStream_Lock = new object();
 
+        public static volatile bool IsInOnEmptyBufferQueue;
+        private static object _CallOnEmptyBuffer_Lock = new object();
+        private static Queue<LinkEventArgs> _CallOnEmptyBufferQueue = new Queue<LinkEventArgs>();
+
         private object _ReadStream_Lock = new object();
         private MemoryStream _rms1 = null;
         private BinaryWriter _rbw1 = null;
@@ -186,9 +190,9 @@ namespace Vaser
         {
             _BootUpTimes++;
 
-            //kill the connection attempt after 5 sek
+            //kill the connection attempt after 15 sek
 
-            if (_BootUpTimes > 50)
+            if (_BootUpTimes > 150)
             {
                 _BootUpTimes = 0;
                 _BootUpTimer.Stop();
@@ -390,6 +394,38 @@ namespace Vaser
             }
         }
 
+        internal static void QueueOnEmptyBuffer()
+        {
+            if (IsInOnEmptyBufferQueue == false)
+            {
+                IsInOnEmptyBufferQueue = true;
+                ThreadPool.QueueUserWorkItem(WorkOnEmptyBuffer);
+            }
+        }
+
+
+        internal static void WorkOnEmptyBuffer(Object threadContext)
+        {
+            while(true)
+            {
+                LinkEventArgs LinkEA = null;
+                lock(_CallOnEmptyBuffer_Lock)
+                {
+                    LinkEA = _CallOnEmptyBufferQueue.Dequeue();
+                }
+
+                if(LinkEA.lnk.IsConnected) LinkEA.lnk.OnEmptyBuffer(LinkEA);
+
+                lock (_CallOnEmptyBuffer_Lock)
+                {
+                    if (_CallOnEmptyBufferQueue.Count == 0)
+                    {
+                        IsInOnEmptyBufferQueue = false;
+                        break;
+                    }
+                }
+            }
+        }
 
         // Wrapper method for use with thread pool.
         internal void ThreadPoolCallback(Object threadContext)
@@ -614,9 +650,7 @@ namespace Vaser
                 _sslStream = null;
                 _ConnectionStream = null;
                 _SocketTCPClient = null;
-
-
-
+                
 
                 _aTimer.Stop();
                 _aTimer.Dispose();
@@ -862,7 +896,15 @@ namespace Vaser
 
                         LinkEventArgs args = new LinkEventArgs();
                         args.lnk = link;
-                        link.OnEmptyBuffer(args);
+                        
+
+                        lock (_CallOnEmptyBuffer_Lock)
+                        {
+                            _CallOnEmptyBufferQueue.Enqueue(args);
+                        }
+
+                        QueueOnEmptyBuffer();
+                            
                     }
 
 
