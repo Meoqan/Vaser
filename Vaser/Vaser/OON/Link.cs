@@ -330,6 +330,12 @@ namespace Vaser
         {
             Valid = true;
 
+            if (_Connect._IsAccepted == false)
+            {
+                _Connect._IsAccepted = true;
+                _Connect.Receive();
+            }
+
             lock (_Static_ThreadLock)
             {
                 _LinkList.Add(this);

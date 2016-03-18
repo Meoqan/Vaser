@@ -41,8 +41,8 @@ namespace test_server_benchmark
             system.IncomingPacket += OnSystemPacket;
 
             //start the server
-            VaserServer Server1 = new VaserServer(System.Net.IPAddress.Any, 3100, VaserOptions.ModeNotEncrypted, PC);
-            VaserServer Server2 = new VaserServer(System.Net.IPAddress.Any, 3101, VaserOptions.ModeNotEncrypted, PC);
+            VaserServer Server1 = new VaserServer(System.Net.IPAddress.Any, 3100, PC);
+            VaserServer Server2 = new VaserServer(System.Net.IPAddress.Any, 3101, PC);
 
             Server1.NewLink += OnNewLinkServer1;
             Server2.NewLink += OnNewLinkServer2;

@@ -4,6 +4,7 @@ using Vaser;
 using System.Collections.Generic;
 using System.Threading;
 using System.Net.Sockets;
+using System.Diagnostics;
 
 namespace VaserUnitTest
 {
@@ -25,8 +26,17 @@ namespace VaserUnitTest
         [ExpectedException(typeof(SocketException))]
         public void FailConnection()
         {
-            Link lnkC = VaserClient.ConnectClient("localhost", 3100, VaserOptions.ModeKerberos);
+            PortalCollection PColl = new PortalCollection();
+            Portal test = PColl.CreatePortal(0);
+            Link lnkC = VaserClient.ConnectClient("localhost", 3110, PColl);
         }
+
+        PortalCollection PCollS = null;
+        Portal testS = null;
+
+        PortalCollection PCollC = null;
+        Portal testC = null;
+        AutoResetEvent autoEvent = new AutoResetEvent(false);
 
         [TestMethod]
         public void TestServer()
@@ -34,95 +44,90 @@ namespace VaserUnitTest
             // create new container
             TestContainer con1 = new TestContainer();
 
-            bool online = true;
-
             //initialize the server
-            Portal system = new Portal();
-            //start the server
-            VaserServer Server1 = new VaserServer(System.Net.IPAddress.Any, 3100, VaserOptions.ModeKerberos);
+            PCollS = new PortalCollection();
+            testS = PCollS.CreatePortal(0);
 
-            Link lnkC = VaserClient.ConnectClient("localhost", 3100, VaserOptions.ModeKerberos);
-            
+            testS.IncomingPacket += OnTestServer;
+
+            //start the server
+            VaserServer Server1 = new VaserServer(System.Net.IPAddress.Any, 3120, PCollS);
+
+            Server1.NewLink += OnNewLinkServer1;
+            Server1.DisconnectingLink += OnDisconnectingLinkServer1;
+
+
+            PCollC = new PortalCollection();
+            testC = PCollC.CreatePortal(0);
+            testC.IncomingPacket += OnTestClient;
+
+            Link lnkC = VaserClient.ConnectClient("localhost", 3120, PCollC);
+
 
             if (lnkC != null) Console.WriteLine("1: successfully established connection.");
 
 
-            //create connection managing lists
-            List<Link> Livinglist = new List<Link>();
-            List<Link> Removelist = new List<Link>();
+            autoEvent.WaitOne();
 
-            //run the server
-            while (online)
-            {
-                //accept new client
-                Link lnk1 = Server1.GetNewLink();
-                if (lnk1 != null)
-                {
-                    Livinglist.Add(lnk1);
-                    lnk1.Accept();
-
-                    //send data
-                    con1.test = "You are connected to Server 1 via Vaser. Please send your Logindata.";
-                    // the last 2 digits are manually set [1]
-                    system.SendContainer(lnk1, con1, 1, 1);
-                }
-                
-                //proceed incoming data
-                foreach (Packet_Recv pak in system.GetPakets())
-                {
-                    // [1] now you can sort the packet to the right container and object
-                    Console.WriteLine("the packet has the container ID {0} and is for the object ID {1} ", pak.ContainerID, pak.ObjectID);
-
-                    if (pak.ObjectID == 1)
-                    {
-                        //unpack the packet, true if the decode was successful
-                        if (con1.UnpackContainer(pak, system))
-                        {
-                            Console.WriteLine(con1.test);
-
-                            // the last 2 digits are manually set [1]
-                            system.SendContainer(pak.link, con1, 1, 2);
-                        }
-                    }
-                    else
-                    {
-                        lnkC.Dispose();
-                    }
-                }
-
-                //send all bufferd data to the clients
-                Portal.Finialize();
-
-                Thread.Sleep(10);
-
-                //disconnet clients
-                foreach (Link l in Livinglist)
-                {
-                    con1.test = "beep.";
-                    con1.array = new int[1];
-                    //system.SendContainer(l, con2, 1, 1);
-                    //Console.WriteLine("beep.");
-                    if (!l.IsConnected) Removelist.Add(l);
-                }
-
-                foreach (Link l in Removelist)
-                {
-                    Livinglist.Remove(l);
-                    //free all resources
-                    l.Dispose();
-                    Console.WriteLine("Client disconnected");
-                    online = false;
-
-                }
-                Removelist.Clear();
-
-                Thread.Sleep(1);
-            }
 
             //close the server
             Server1.Stop();
 
-            
+
+        }
+
+
+        TestContainer con3 = new TestContainer();
+        void OnNewLinkServer1(object p, LinkEventArgs e)
+        {
+            e.lnk.Accept();
+
+            //send data
+            con3.ID = 0;
+            con3.test = "You are connected to Server 1 via Vaser. Please send your Logindata.";
+            // the last 2 digits are manually set [1]
+            testS.SendContainer(e.lnk, con3, 1, 0);
+
+        }
+
+        void OnDisconnectingLinkServer1(object p, LinkEventArgs e)
+        {
+            Console.WriteLine("CL1 DIS");
+
+            autoEvent.Set();
+        }
+
+        TestContainer con2 = new TestContainer();
+        void OnTestServer(object p, PacketEventArgs e)
+        {
+            //unpack the packet, true if the decode was successful
+            if (con2.UnpackContainer(e.pak, e.portal))
+            {
+                //Console.WriteLine(con1.test);
+                Debug.WriteLine("Ping!  CounterID" + con2.ID + " Object:" + e.pak.ObjectID);
+                // the last 2 digits are manually set [1]
+                e.portal.SendContainer(e.lnk, con2, 1, e.pak.ObjectID);
+            }
+            else
+            {
+                Console.WriteLine("Decode error");
+            }
+        }
+
+        TestContainer con4 = new TestContainer();
+        void OnTestClient(object p, PacketEventArgs e)
+        {
+            //unpack the packet, true if the decode was successful
+            if (con4.UnpackContainer(e.pak, e.portal))
+            {
+                //Console.WriteLine(con1.test);
+                Debug.WriteLine("Pong!  CounterID" + con2.ID + " Object:" + e.pak.ObjectID);
+                e.lnk.Dispose();
+            }
+            else
+            {
+                Debug.WriteLine("Decode error");
+            }
         }
     }
 }

@@ -33,8 +33,9 @@ namespace Vaser
         private object _DisconnectingLinkList_ThreadLock = new object();
         private List<Link> _DisconnectingLinkList = new List<Link>();
 
-        private X509Certificate2 _Certificate = null;
         private VaserOptions _ServerOption = null;
+        private VaserKerberosServer _vKerberos = null;
+        private VaserSSLServer _vSSL = null;
 
         private PortalCollection _PCollection = null;
 
@@ -66,25 +67,7 @@ namespace Vaser
                 }
             }
         }
-
-        public X509Certificate2 Certificate
-        {
-            get
-            {
-                lock (_ThreadLock)
-                {
-                    return _Certificate;
-                }
-            }
-            set
-            {
-                lock (_ThreadLock)
-                {
-                    _Certificate = value;
-                }
-            }
-        }
-
+        
         public VaserOptions ServerOption
         {
             get
@@ -168,21 +151,65 @@ namespace Vaser
         }
 
         /// <summary>
-        /// Creates a new TCP Server and listen for clients
+        /// Creates a new unencrypted TCP Server and listen for clients
         /// </summary>
         /// <param name="LocalAddress">IPAddress.Any</param>
         /// <param name="Port">3000</param>
-        /// <param name="Mode">VaserOptions.ModeKerberos</param>
-        public VaserServer(IPAddress LocalAddress, int Port, VaserOptions Mode, PortalCollection PColl)
+        /// <param name="PortalCollection">the Portal Collection</param>
+        public VaserServer(IPAddress LocalAddress, int Port, PortalCollection PColl)
         {
-            if (Mode == VaserOptions.ModeSSL) throw new Exception("Missing X509Certificate2");
             if (PColl == null) throw new Exception("PortalCollection is needed!");
 
             try
             {
                 lock (_ThreadLock)
                 {
-                    _ServerOption = Mode;
+                    _ServerOption = VaserOptions.ModeNotEncrypted;
+                    _PCollection = PColl;
+                    _TCPListener = new TcpListener(LocalAddress, Port);
+                    //_ListenThread = new Thread(new ThreadStart(ListenForClients));
+                    //_ListenThread.Start();
+                    _TCPListener.Start();
+
+                    _aTimer = new System.Timers.Timer(5);
+                    _aTimer.Elapsed += ListenForClients;
+                    _aTimer.AutoReset = true;
+                    _aTimer.Enabled = true;
+
+                    if (_GCTimer == null)
+                    {
+                        _GCTimer = new System.Timers.Timer(5000);
+                        _GCTimer.Elapsed += GC_Collect;
+                        _GCTimer.AutoReset = true;
+                        _GCTimer.Enabled = true;
+                    }
+
+                }
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
+        /// <summary>
+        /// Creates a new Kerberos Server and listen for clients
+        /// </summary>
+        /// <param name="LocalAddress">IPAddress.Any</param>
+        /// <param name="Port">3000</param>
+        /// <param name="PortalCollection">the Portal Collection</param>
+        /// <param name="Kerberos">Kerberos connection settings</param>
+        public VaserServer(IPAddress LocalAddress, int Port, PortalCollection PColl, VaserKerberosServer Kerberos)
+        {
+            if (Kerberos == null) throw new Exception("Missing Kerberos options in VaserServer(...)");
+            if (PColl == null) throw new Exception("PortalCollection is needed!");
+
+            try
+            {
+                lock (_ThreadLock)
+                {
+                    _vKerberos = Kerberos;
+                    _ServerOption = VaserOptions.ModeKerberos;
                     _PCollection = PColl;
                     _TCPListener = new TcpListener(LocalAddress, Port);
                     //_ListenThread = new Thread(new ThreadStart(ListenForClients));
@@ -210,22 +237,22 @@ namespace Vaser
         }
 
         /// <summary>
-        /// Creates a new TCP Server and listen for clients
+        /// Creates a new SSL Server and listen for clients
         /// </summary>
         /// <param name="LocalAddress">IPAddress.Any</param>
         /// <param name="Port">3000</param>
-        /// <param name="Mode">VaserOptions.ModeSSL</param>
-        /// <param name="Cert">X509Certificate</param>
-        public VaserServer(IPAddress LocalAddress, int Port, VaserOptions Mode, PortalCollection PColl, X509Certificate2 Cert)
+        /// <param name="PortalCollection">the Portal Collection</param>
+        /// <param name="SSL">SSL connection settings</param>
+        public VaserServer(IPAddress LocalAddress, int Port, PortalCollection PColl, VaserSSLServer SSL)
         {
-            if (Mode == VaserOptions.ModeSSL && Cert == null) throw new Exception("Missing X509Certificate2 in VaserServer(IPAddress LocalAddress, int Port, VaserOptions Mode, X509Certificate Cert)");
+            if (SSL == null) throw new Exception("Missing SSL options in VaserServer(...)");
             if (PColl == null) throw new Exception("PortalCollection is needed!");
             try
             {
                 lock (_ThreadLock)
                 {
-                    _Certificate = Cert;
-                    _ServerOption = Mode;
+                    _vSSL = SSL;
+                    _ServerOption = VaserOptions.ModeSSL;
                     _PCollection = PColl;
                     _TCPListener = new TcpListener(LocalAddress, Port);
                     //_ListenThread = new Thread(new ThreadStart(ListenForClients));
@@ -296,8 +323,8 @@ namespace Vaser
         {
             try
             {
-                Connection con = new Connection((TcpClient)Client, true, _ServerOption, _PCollection, _Certificate, null, null, this);
-
+                Connection con = new Connection((TcpClient)Client, true, _ServerOption, _PCollection, _vKerberos, _vSSL, null, null, this);
+                 
                 lock (_ConnectionList_ThreadLock)
                 {
                     _ConnectionList.Add(con);

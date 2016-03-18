@@ -21,7 +21,6 @@ namespace test_client
         }
         // create new container
         static TestContainer con1 = new TestContainer();
-
         static void Main(string[] args)
         {
 
@@ -38,7 +37,7 @@ namespace test_client
             //Create a TestCert in CMD: makecert -sr LocalMachine -ss root -r -n "CN=localhost" -sky exchange -sk 123456
             // Do not use in Production | do not use localhost -> use your machinename!
 
-            //Import Test Cert from local store
+            /*//Import Test Cert from local store
             X509Certificate2Collection cCollection = new X509Certificate2Collection();
 
             X509Store store = new X509Store(StoreName.Root, StoreLocation.LocalMachine);
@@ -63,7 +62,7 @@ namespace test_client
             // Get the value.
             string resultsFalse = cCollection[0].ToString(false);
             // Display the value to the console.
-            Console.WriteLine(resultsFalse);
+            Console.WriteLine(resultsFalse);*/
 
 
 
@@ -72,7 +71,9 @@ namespace test_client
             _aTimer.AutoReset = true;
             _aTimer.Enabled = true;*/
             Thread.Sleep(100);
-            Link lnk1 = VaserClient.ConnectClient("localhost", 3100, VaserOptions.ModeSSL, PC, cCollection, "localhost");
+
+            VaserSSLClient ssl = new VaserSSLClient("localhost");
+            Link lnk1 = VaserClient.ConnectClient("localhost", 3100, PC, ssl);
             lnk1.EmptyBuffer += OnEmptyBuffer;
 
             if (lnk1 != null) Console.WriteLine("1: successfully established connection.");

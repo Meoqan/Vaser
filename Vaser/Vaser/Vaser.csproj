@@ -49,8 +49,12 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="global\VaserKerberosClient.cs" />
+    <Compile Include="global\VaserKerberosServer.cs" />
+    <Compile Include="global\VaserSSLClient.cs" />
+    <Compile Include="global\VaserSSLServer.cs" />
     <Compile Include="IDPool.cs" />
-    <Compile Include="Net\VaserOptions.cs" />
+    <Compile Include="global\VaserOptions.cs" />
     <Compile Include="OON\Command.cs" />
     <Compile Include="OON\Container.cs" />
     <Compile Include="OON\Function.cs" />

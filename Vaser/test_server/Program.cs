@@ -24,7 +24,7 @@ namespace test_server
         }
 
         // create new container
-        
+
         static int testmode = 0;
         static Stopwatch watch = new Stopwatch();
         static Link test1 = null;
@@ -71,7 +71,6 @@ namespace test_server
             else
             {
                 Console.WriteLine("Test Cert was found");
-                cert = certificates[0];
             }
 
             // Get the value.
@@ -85,8 +84,8 @@ namespace test_server
 
             //start the server
             Console.WriteLine("Creating server: IPAddress any, Port 3100, VaserMode ModeSSL");
-
-            VaserServer Server1 = new VaserServer(System.Net.IPAddress.Any, 3100, VaserOptions.ModeSSL, PC, cert);
+            VaserSSLServer ssl = new VaserSSLServer(certificates[0]);
+            VaserServer Server1 = new VaserServer(System.Net.IPAddress.Any, 3100, PC, ssl);
             Server1.NewLink += OnNewLink;
 
 

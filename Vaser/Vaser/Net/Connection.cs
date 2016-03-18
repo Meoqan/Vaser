@@ -61,9 +61,13 @@ namespace Vaser
         private BinaryReader _rbr2 = null;
 
         private VaserOptions _Mode = null;
-        private X509Certificate2 _Cert = null;
-        private X509Certificate2Collection _CertCol = null;
-        private string _targetHostname = string.Empty;
+        //private X509Certificate2 _Cert = null;
+        //private X509Certificate2Collection _CertCol = null;
+        //private string _targetHostname = string.Empty;
+        private VaserSSLServer _vSSLS = null;
+        private VaserKerberosServer _vKerberosS = null;
+        private VaserSSLClient _vSSLC = null;
+        private VaserKerberosClient _vKerberosC = null;
 
         private volatile bool IsInQueue = false;
         private volatile bool IsInSendQueue = false;
@@ -131,11 +135,11 @@ namespace Vaser
                 }
             }
         }
-       
+
         /// <summary>
         /// Creates a new connection for processing data
         /// </summary>
-        public Connection(TcpClient client, bool _IsServer, VaserOptions Mode, PortalCollection PColl, X509Certificate2 Cert = null, X509Certificate2Collection cCollection = null, string targetHostname = null, VaserServer srv = null)
+        public Connection(TcpClient client, bool _IsServer, VaserOptions Mode, PortalCollection PColl, VaserKerberosServer KerberosS, VaserSSLServer SSLS, VaserKerberosClient KerberosC, VaserSSLClient SSLC, VaserServer srv = null)
         {
             IsServer = _IsServer;
 
@@ -158,9 +162,12 @@ namespace Vaser
             _Mode = Mode;
             _PCollection = PColl;
 
-            _Cert = Cert;
-            _CertCol = cCollection;
-            _targetHostname = targetHostname;
+            //_Cert = Cert;
+            _vSSLS = SSLS;
+            _vKerberosS = KerberosS;
+            _vSSLC = SSLC;
+            _vKerberosC = KerberosC;
+            //_targetHostname = targetHostname;
 
             _SocketTCPClient = client;
 
@@ -238,6 +245,8 @@ namespace Vaser
             _BootUpTimer.Elapsed += _BootUpTimer_Elapsed;
             _BootUpTimer.Start();
 
+            bool leaveInnerStreamOpen = false;
+
             try
             {
 
@@ -247,12 +256,12 @@ namespace Vaser
                 // encryption
                 if (_Mode == VaserOptions.ModeKerberos)
                 {
-                    _AuthStream = new NegotiateStream(_ConnectionStream, false);
+                    _AuthStream = new NegotiateStream(_ConnectionStream, leaveInnerStreamOpen);
                 }
 
                 if (_Mode == VaserOptions.ModeSSL)
                 {
-                    _sslStream = new SslStream(_ConnectionStream, false);
+                    _sslStream = new SslStream(_ConnectionStream, leaveInnerStreamOpen);
                 }
 
                 if (_Mode == VaserOptions.ModeNotEncrypted)
@@ -266,7 +275,30 @@ namespace Vaser
 
                     if (_Mode == VaserOptions.ModeKerberos)
                     {
-                        _AuthStream.AuthenticateAsServer();
+
+
+                        if (_vKerberosS._policy == null)
+                        {
+                            if (_vKerberosS._credential == null)
+                            {
+                                _AuthStream.AuthenticateAsServer();
+                            }
+                            else
+                            {
+                                _AuthStream.AuthenticateAsServer(_vKerberosS._credential, _vKerberosS._requiredProtectionLevel, _vKerberosS._requiredImpersonationLevel);
+                            }
+                        }
+                        else
+                        {
+                            if (_vKerberosS._credential == null)
+                            {
+                                _AuthStream.AuthenticateAsServer(_vKerberosS._policy);
+                            }
+                            else
+                            {
+                                _AuthStream.AuthenticateAsServer(_vKerberosS._credential, _vKerberosS._policy, _vKerberosS._requiredProtectionLevel, _vKerberosS._requiredImpersonationLevel);
+                            }
+                        }
 
                         link.IsAuthenticated = _AuthStream.IsAuthenticated;
                         link.IsEncrypted = _AuthStream.IsEncrypted;
@@ -282,7 +314,15 @@ namespace Vaser
 
                     if (_Mode == VaserOptions.ModeSSL)
                     {
-                        _sslStream.AuthenticateAsServer(_Cert, false, SslProtocols.Tls12, false);
+                        if (_vSSLS._enabledSslProtocols == SslProtocols.None)
+                        {
+                            _sslStream.AuthenticateAsServer(_vSSLS._serverCertificate);
+                        }
+                        else
+                        {
+                            _sslStream.AuthenticateAsServer(_vSSLS._serverCertificate, _vSSLS._clientCertificateRequired, _vSSLS._enabledSslProtocols, _vSSLS._checkCertificateRevocation);
+                        }
+
                         link.IsEncrypted = true;
                         link.IsServer = true;
                     }
@@ -302,8 +342,36 @@ namespace Vaser
 
                     if (_Mode == VaserOptions.ModeKerberos)
                     {
-                        _AuthStream.AuthenticateAsClient();
-
+                        if (_vKerberosC._binding == null)
+                        {
+                            if (_vKerberosC._credential == null)
+                            {
+                                _AuthStream.AuthenticateAsClient();
+                            }
+                            else
+                            {
+                                if (_vKerberosC._requiredProtectionLevel == ProtectionLevel.None && _vKerberosC._requiredImpersonationLevel == TokenImpersonationLevel.None)
+                                {
+                                    _AuthStream.AuthenticateAsClient(_vKerberosC._credential, _vKerberosC._targetName);
+                                }
+                                else
+                                {
+                                    _AuthStream.AuthenticateAsClient(_vKerberosC._credential, _vKerberosC._targetName, _vKerberosC._requiredProtectionLevel, _vKerberosC._requiredImpersonationLevel);
+                                }
+                            }
+                        }
+                        else
+                        {
+                            if (_vKerberosC._requiredProtectionLevel == ProtectionLevel.None && _vKerberosC._requiredImpersonationLevel == TokenImpersonationLevel.None)
+                            {
+                                _AuthStream.AuthenticateAsClient(_vKerberosC._credential, _vKerberosC._binding, _vKerberosC._targetName);
+                            }
+                            else
+                            {
+                                _AuthStream.AuthenticateAsClient(_vKerberosC._credential, _vKerberosC._binding, _vKerberosC._targetName, _vKerberosC._requiredProtectionLevel, _vKerberosC._requiredImpersonationLevel);
+                            }
+                        }
+                        
                         link.IsAuthenticated = _AuthStream.IsAuthenticated;
                         link.IsEncrypted = _AuthStream.IsEncrypted;
                         link.IsMutuallyAuthenticated = _AuthStream.IsMutuallyAuthenticated;
@@ -316,16 +384,28 @@ namespace Vaser
 
                     if (_Mode == VaserOptions.ModeSSL)
                     {
-                        _sslStream.AuthenticateAsClient(_targetHostname, _CertCol, SslProtocols.Tls12, false);
+
+                        if (_vSSLC._clientCertificates == null)
+                        {
+                            _sslStream.AuthenticateAsClient(_vSSLC._targetHost);
+                        }
+                        else
+                        {
+                            _sslStream.AuthenticateAsClient(_vSSLC._targetHost, _vSSLC._clientCertificates, _vSSLC._enabledSslProtocols, _vSSLC._checkCertificateRevocation);
+                        }
+
+
                         link.IsEncrypted = true;
                     }
 
                     //Thread.Sleep(50);
                     BootupDone = true;
+
+                    _IsAccepted = true;
+                    Receive();
                 }
 
-                _IsAccepted = true;
-                Receive();
+
 
                 _aTimer.Enabled = true;
                 _aTimer.Start();
@@ -406,15 +486,15 @@ namespace Vaser
 
         internal static void WorkOnEmptyBuffer(Object threadContext)
         {
-            while(true)
+            while (true)
             {
                 LinkEventArgs LinkEA = null;
-                lock(_CallOnEmptyBuffer_Lock)
+                lock (_CallOnEmptyBuffer_Lock)
                 {
                     LinkEA = _CallOnEmptyBufferQueue.Dequeue();
                 }
 
-                if(LinkEA.lnk.IsConnected) LinkEA.lnk.OnEmptyBuffer(LinkEA);
+                if (LinkEA.lnk.IsConnected) LinkEA.lnk.OnEmptyBuffer(LinkEA);
 
                 lock (_CallOnEmptyBuffer_Lock)
                 {
@@ -565,7 +645,7 @@ namespace Vaser
                         _rms2.SetLength(0);
                         _rms2.Flush();
                         _rbw2.Flush();
-                      
+
                         _rbw2.Write(lastbytes);
 
                     }
@@ -627,16 +707,16 @@ namespace Vaser
                     }
                     catch
                     {
-                       
+
                     }
 
                 }
 
-                
+
 
                 //Thread.Sleep(10);
 
-            
+
                 if (_AuthStream != null) _AuthStream.Close();
                 if (_sslStream != null) _sslStream.Close();
                 _ConnectionStream.Close();
@@ -650,7 +730,7 @@ namespace Vaser
                 _sslStream = null;
                 _ConnectionStream = null;
                 _SocketTCPClient = null;
-                
+
 
                 _aTimer.Stop();
                 _aTimer.Dispose();
@@ -724,7 +804,7 @@ namespace Vaser
 
 
         Packet_Send byteData = null;
-        private void Receive()
+        internal void Receive()
         {
             try
             {
@@ -761,7 +841,7 @@ namespace Vaser
             try
             {
 
-                if(_Mode == VaserOptions.ModeNotEncrypted)
+                if (_Mode == VaserOptions.ModeNotEncrypted)
                 {
                     NetworkStream sendingSocket = (NetworkStream)iar.AsyncState;
                     bytesRead = sendingSocket.EndRead(iar);
@@ -825,7 +905,7 @@ namespace Vaser
                 {
                     _NotEncryptedStream.BeginRead(_buff, 0, _buff.Length, myReceiveCallback, _NotEncryptedStream);
                 }
-                
+
             }
             catch (Exception e)
             {
@@ -896,7 +976,7 @@ namespace Vaser
 
                         LinkEventArgs args = new LinkEventArgs();
                         args.lnk = link;
-                        
+
 
                         lock (_CallOnEmptyBuffer_Lock)
                         {
@@ -904,7 +984,7 @@ namespace Vaser
                         }
 
                         QueueOnEmptyBuffer();
-                            
+
                     }
 
 
