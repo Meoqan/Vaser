@@ -35,8 +35,9 @@ namespace test_server_benchmark
         static void Main(string[] args)
         {
             //Client initalisieren
+            system = new Portal(100);
             PortalCollection PC = new PortalCollection();
-            system = PC.CreatePortal(100);
+            PC.RegisterPortal(system);
 
             system.IncomingPacket += OnSystemPacket;
 
@@ -50,7 +51,8 @@ namespace test_server_benchmark
             Server1.DisconnectingLink += OnDisconnectingLinkServer1;
             Server2.DisconnectingLink += OnDisconnectingLinkServer2;
 
-
+            Server1.Start();
+            Server2.Start();
             //TestContainer con2 = new TestContainer();
 
 

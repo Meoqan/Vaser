@@ -10,8 +10,8 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("Philipp Gerull")]
 [assembly: AssemblyProduct("Vaser")]
-[assembly: AssemblyCopyright("Copyright 2016 Philipp Gerull")]
-[assembly: AssemblyTrademark("")]
+[assembly: AssemblyCopyright("GNU GPLv3 - MIT - by Philipp Gerull 2016")]
+[assembly: AssemblyTrademark("Clusterware.de")]
 [assembly: AssemblyCulture("")]
 
 // Durch Festlegen von ComVisible auf "false" werden die Typen in dieser Assembly unsichtbar 
@@ -32,5 +32,5 @@ using System.Runtime.InteropServices;
 // Sie können alle Werte angeben oder die standardmäßigen Build- und Revisionsnummern 
 // übernehmen, indem Sie "*" eingeben:
 // [assembly: AssemblyVersion("1.0.*")]
-[assembly: AssemblyVersion("1.1.4.0")]
-[assembly: AssemblyFileVersion("1.1.4.0")]
+[assembly: AssemblyVersion("1.1.6.0")]
+[assembly: AssemblyFileVersion("1.1.6.0")]

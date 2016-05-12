@@ -31,8 +31,9 @@ namespace test_client_benchmark
             bool online = true;
 
             //Client initalisieren
+            Portal system = new Portal(100);
             PortalCollection PC = new PortalCollection();
-            Portal system = PC.CreatePortal(100);
+            PC.RegisterPortal(system);
 
             system.IncomingPacket += OnSystemPacket;
 

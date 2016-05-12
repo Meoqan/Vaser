@@ -150,6 +150,36 @@ namespace Vaser
             _GCTimer.Enabled = false;
         }
 
+
+        /// <summary>
+        /// Starts listening for clients on selected Mode.
+        /// </summary>
+        public void Start()
+        {
+            try
+            {
+                _TCPListener.Start();
+                
+                _aTimer = new System.Timers.Timer(5);
+                _aTimer.Elapsed += ListenForClients;
+                _aTimer.AutoReset = true;
+                _aTimer.Enabled = true;
+
+                if (_GCTimer == null)
+                {
+                    System.Runtime.GCSettings.LatencyMode = System.Runtime.GCLatencyMode.LowLatency;
+                    _GCTimer = new System.Timers.Timer(15000);
+                    _GCTimer.Elapsed += GC_Collect;
+                    _GCTimer.AutoReset = true;
+                    _GCTimer.Enabled = true;
+                }
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
         /// <summary>
         /// Creates a new unencrypted TCP Server and listen for clients
         /// </summary>
@@ -165,25 +195,10 @@ namespace Vaser
                 lock (_ThreadLock)
                 {
                     _ServerOption = VaserOptions.ModeNotEncrypted;
+                    PColl._Active = true;
                     _PCollection = PColl;
                     _TCPListener = new TcpListener(LocalAddress, Port);
-                    //_ListenThread = new Thread(new ThreadStart(ListenForClients));
-                    //_ListenThread.Start();
-                    _TCPListener.Start();
-
-                    _aTimer = new System.Timers.Timer(5);
-                    _aTimer.Elapsed += ListenForClients;
-                    _aTimer.AutoReset = true;
-                    _aTimer.Enabled = true;
-
-                    if (_GCTimer == null)
-                    {
-                        _GCTimer = new System.Timers.Timer(5000);
-                        _GCTimer.Elapsed += GC_Collect;
-                        _GCTimer.AutoReset = true;
-                        _GCTimer.Enabled = true;
-                    }
-
+                    
                 }
             }
             catch (Exception ex)
@@ -210,25 +225,10 @@ namespace Vaser
                 {
                     _vKerberos = Kerberos;
                     _ServerOption = VaserOptions.ModeKerberos;
+                    PColl._Active = true;
                     _PCollection = PColl;
                     _TCPListener = new TcpListener(LocalAddress, Port);
-                    //_ListenThread = new Thread(new ThreadStart(ListenForClients));
-                    //_ListenThread.Start();
-                    _TCPListener.Start();
                     
-                    _aTimer = new System.Timers.Timer(5);
-                    _aTimer.Elapsed += ListenForClients;
-                    _aTimer.AutoReset = true;
-                    _aTimer.Enabled = true;
-
-                    if (_GCTimer == null)
-                    {
-                        _GCTimer = new System.Timers.Timer(5000);
-                        _GCTimer.Elapsed += GC_Collect;
-                        _GCTimer.AutoReset = true;
-                        _GCTimer.Enabled = true;
-                    }
-
                 }
             }catch(Exception ex)
             {
@@ -253,24 +253,10 @@ namespace Vaser
                 {
                     _vSSL = SSL;
                     _ServerOption = VaserOptions.ModeSSL;
+                    PColl._Active = true;
                     _PCollection = PColl;
                     _TCPListener = new TcpListener(LocalAddress, Port);
-                    //_ListenThread = new Thread(new ThreadStart(ListenForClients));
-                    //_ListenThread.Start();
-                    _TCPListener.Start();
-
-                    _aTimer = new System.Timers.Timer(5);
-                    _aTimer.Elapsed += ListenForClients;
-                    _aTimer.AutoReset = true;
-                    _aTimer.Enabled = true;
-
-                    if (_GCTimer == null)
-                    {
-                        _GCTimer = new System.Timers.Timer(15000);
-                        _GCTimer.Elapsed += GC_Collect;
-                        _GCTimer.AutoReset = true;
-                        _GCTimer.Enabled = true;
-                    }
+                    
                 }
             }
             catch (Exception ex)

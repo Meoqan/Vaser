@@ -452,7 +452,7 @@ namespace Vaser
             {
                 if (_link.SendDataPortalArrayOUTPUT[0] != null) _link.SendDataPortalArrayOUTPUT[0].Enqueue(_timeoutpacket);
             }
-            SendData();
+            QueueSend();
         }
 
 
@@ -513,24 +513,7 @@ namespace Vaser
 
             StreamDecrypt();
         }
-
-        /// <summary>
-        /// Send data
-        /// </summary>
-        /// <param name="Data"></param>
-        internal void SendData()
-        {
-
-            if (StreamIsConnected)
-            {
-
-                QueueSend();
-            }
-
-
-        }
-
-
+        
 
         /// <summary>
         /// Stops the connection
@@ -577,7 +560,7 @@ namespace Vaser
                             _rms1.Flush();
                             _rbw1.Flush();
 
-                            IsInQueue = false;
+                            
                         }
                         //_ReadStream_Lock.Release();
                         _rms2.Position = 0;
@@ -623,11 +606,13 @@ namespace Vaser
 
                                         if (size - Options.PacketHeadSize == 0)
                                         {
-                                            _PCollection.GivePacketToClass(new Packet_Recv(link, _rbr2), null);
+                                            _PCollection.GivePacketToClass(new Packet_Recv(link, _rbr2));
                                         }
                                         else
                                         {
-                                            _PCollection.GivePacketToClass(new Packet_Recv(link, _rbr2), _rbr2.ReadBytes(size - Options.PacketHeadSize));
+                                            Packet_Recv Recv = new Packet_Recv(link, _rbr2);
+                                            Recv.Data = _rbr2.ReadBytes(size - Options.PacketHeadSize);
+                                            _PCollection.GivePacketToClass(Recv);
                                         }
 
                                         mode = 0;
@@ -641,11 +626,21 @@ namespace Vaser
 
                         byte[] lastbytes = _rbr2.ReadBytes((int)(_rms2.Length - _rms2.Position));
 
-
-                        _rms2.SetLength(0);
-                        _rms2.Flush();
-                        _rbw2.Flush();
-
+                        if (_rms2.Length > 1000000)
+                        {
+                            _rms2.Dispose();
+                            _rbr2.Dispose();
+                            _rbw2.Dispose();
+                            _rms2 = new MemoryStream();
+                            _rbr2 = new BinaryReader(_rms2);
+                            _rbw2 = new BinaryWriter(_rms2);
+                        }
+                        else
+                        {
+                            _rms2.SetLength(0);
+                            _rms2.Flush();
+                            _rbw2.Flush();
+                        }
                         _rbw2.Write(lastbytes);
 
                     }
@@ -661,7 +656,7 @@ namespace Vaser
                 //Dispose();
                 ThreadIsRunning = false;
             }
-
+            IsInQueue = false;
         }
 
 

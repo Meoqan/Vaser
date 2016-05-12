@@ -73,8 +73,9 @@ namespace VaserUnitTest
 
                 Thread.Sleep(1000);
 
+                system = new Portal(100);
                 PColl = new PortalCollection();
-                system = PColl.CreatePortal(100);
+                PColl.RegisterPortal(system);
 
                 system.IncomingPacket += OnSystemPacket;
 
@@ -215,8 +216,9 @@ namespace VaserUnitTest
             {
 
                 //initialize the server
+                system = new Portal(100);
                 PColl = new PortalCollection();
-                system = PColl.CreatePortal(100);
+                PColl.RegisterPortal(system);
 
                 system.IncomingPacket += OnSystemPacket;
 
@@ -230,8 +232,11 @@ namespace VaserUnitTest
                 Server1.DisconnectingLink += OnDisconnectingLinkServer1;
                 Server2.DisconnectingLink += OnDisconnectingLinkServer2;
 
+                Server1.Start();
+                Server2.Start();
+
                 //run the server
-                while(!LongTimeTest.stop)
+                while (!LongTimeTest.stop)
                 {
                     Thread.Sleep(1000);
                 }

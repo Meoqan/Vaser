@@ -54,6 +54,9 @@
   </Choose>
   <ItemGroup>
     <Compile Include="LongTimeTest.cs" />
+    <Compile Include="TestClient.cs" />
+    <Compile Include="TestPackets.cs" />
+    <Compile Include="TestServer.cs" />
     <Compile Include="VaserConnection.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

@@ -23,7 +23,7 @@ namespace Vaser
         /// <param name="Port">3000</param>
         /// <param name="PortalCollection">the Portal Collection</param>
         /// <returns>Returns the link to the client</returns>
-        public static Link ConnectClient(string IP, short Port, PortalCollection PColl)
+        public static Link ConnectClient(string IP, int Port, PortalCollection PColl)
         {
             //if (Mode == VaserOptions.ModeSSL) throw new Exception("Missing X509Certificate2");
             if (PColl == null) throw new Exception("PortalCollection is needed!");
@@ -34,6 +34,7 @@ namespace Vaser
                 client.Connect(IP, Port);
                 if (client.Connected)
                 {
+                    PColl._Active = true;
                     Connection con = new Connection(client, false, VaserOptions.ModeNotEncrypted, PColl, null, null, null, null);
 
                     lock (Link._Static_ThreadLock)
@@ -62,7 +63,7 @@ namespace Vaser
         /// <param name="PortalCollection">the Portal Collection</param>
         /// <param name="Kerberos">the kerberos connection settings</param>
         /// <returns>Returns the link to the client</returns>
-        public static Link ConnectClient(string IP, short Port, PortalCollection PColl, VaserKerberosClient Kerberos)
+        public static Link ConnectClient(string IP, int Port, PortalCollection PColl, VaserKerberosClient Kerberos)
         {
             //if (Mode == VaserOptions.ModeSSL) throw new Exception("Missing X509Certificate2");
             if (PColl == null) throw new Exception("PortalCollection is needed!");
@@ -73,6 +74,7 @@ namespace Vaser
                 client.Connect(IP, Port);
                 if (client.Connected)
                 {
+                    PColl._Active = true;
                     Connection con = new Connection(client, false, VaserOptions.ModeKerberos, PColl, null, null, Kerberos, null);
 
                     lock (Link._Static_ThreadLock)
@@ -101,7 +103,7 @@ namespace Vaser
         /// <param name="PortalCollection">the PortalCollection</param>
         /// <param name="SSL">SSL connection settings</param>
         /// <returns>Returns the link to the client</returns>
-        public static Link ConnectClient(string IP, short Port, PortalCollection PColl, VaserSSLClient SSL)
+        public static Link ConnectClient(string IP, int Port, PortalCollection PColl, VaserSSLClient SSL)
         {
             if (SSL == null) throw new Exception("Missing SSL options in ConnectClient(...)");
             if (PColl == null) throw new Exception("PortalCollection is needed!");
@@ -112,6 +114,7 @@ namespace Vaser
                 client.Connect(IP, Port);
                 if (client.Connected)
                 {
+                    PColl._Active = true;
                     Connection con = new Connection(client, false, VaserOptions.ModeSSL, PColl, null, null, null, SSL);
 
                     lock(Link._Static_ThreadLock)

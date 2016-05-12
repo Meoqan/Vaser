@@ -18,8 +18,8 @@ namespace Vaser
     public class Portal
     {
         internal byte _PID = 0;
-        
-        internal PortalCollection _PCollection;
+
+        //internal PortalCollection _PCollection;
 
         internal int counter = 0;
 
@@ -29,64 +29,39 @@ namespace Vaser
         public event EventHandler<PacketEventArgs> IncomingPacket;
 
         internal List<Packet_Recv> packetList1 = new List<Packet_Recv>();
-        internal MemoryStream rms1 = null;
-        internal BinaryWriter rbw1 = null;
-        internal BinaryReader rbr1 = null;
 
         internal List<Packet_Recv> packetListTEMP = null;
-        internal MemoryStream rmsTEMP = null;
-        internal BinaryWriter rbwTEMP = null;
-        internal BinaryReader rbrTEMP = null;
 
         internal List<Packet_Recv> packetList2 = new List<Packet_Recv>();
-        internal MemoryStream rms2 = null;
-        internal BinaryWriter rbw2 = null;
-        internal BinaryReader rbr2 = null;
 
         internal MemoryStream _sendMS = null;
         internal BinaryWriter _sendBW = null;
 
         /// <summary>
-        /// Creates a new portal. Please use 'MyPortalCollection.CreatePortal(...)' instead.
+        /// Creates a new portal. Please register it at 'MyPortalCollection.RegisterPortal(...)'.
         /// </summary>
         /// <param name="PColl"></param>
         /// <param name="PID"></param>
-        public Portal(PortalCollection PColl, byte PID)
+        public Portal(byte PID)
         {
-            if (PColl == null) throw new Exception("A PortalCollection is required. Please use <PortalCollection>.CreatePortal(ID) for creating portals.");
-
-            rms1 = new MemoryStream();
-            rbw1 = new BinaryWriter(rms1);
-            rbr1 = new BinaryReader(rms1);
-
-            rms2 = new MemoryStream();
-            rbw2 = new BinaryWriter(rms2);
-            rbr2 = new BinaryReader(rms2);
 
             _sendMS = new MemoryStream();
             _sendBW = new BinaryWriter(_sendMS);
 
-            _PCollection = PColl;
             _PID = PID;
         }
 
 
         internal object _AddPacket_lock = new object();
-        internal void AddPacket(Packet_Recv pak, byte[] data)
+        internal void AddPacket(Packet_Recv pak)
         {
+            //operating Threadsafe
             lock (_AddPacket_lock)
             {
                 packetList1.Add(pak);
-                pak.StreamPosition = rms1.Position;
-                if (data != null)
-                {
-                    pak.PacketSize = data.Length;
-                    rbw1.Write(data);
-                }
-                else
-                {
-                    pak.PacketSize = 0;
-                }
+                //PacketQueue.Enqueue(pak);
+
+
                 if (!QueueLock)
                 {
                     QueueLock = true;
@@ -99,11 +74,13 @@ namespace Vaser
         object _EventWorker_lock = new object();
         private void EventWorker(object threadContext)
         {
-            
+            //operating Threadsafe
             lock (_EventWorker_lock)
             {
+
                 QueueLock = false;
-                foreach (Packet_Recv pak in GetPakets())
+                List<Packet_Recv> templist = GetPakets();
+                foreach (Packet_Recv pak in templist)
                 {
                     PacketEventArgs args = new PacketEventArgs();
                     args.lnk = pak.link;
@@ -111,12 +88,13 @@ namespace Vaser
                     args.portal = this;
                     OnIncomingPacket(args);
                 }
+                templist.Clear();
             }
         }
 
         protected virtual void OnIncomingPacket(PacketEventArgs e)
         {
-            
+
             EventHandler<PacketEventArgs> handler = IncomingPacket;
             if (handler != null)
             {
@@ -132,50 +110,17 @@ namespace Vaser
         /// <returns>a list of all packets</returns>
         internal List<Packet_Recv> GetPakets()
         {
-            packetList2.Clear();
+            //packetList2.Clear();
 
-            if (rms2.Length < 10000000)
-            {
-                rms2.SetLength(0);
-                rms2.Flush();
-                rbw2.Flush();
-            }
-            else
-            {
-                rms2.Dispose();
-                rbw2.Dispose();
-                rbr2.Dispose();
-                rms2 = new MemoryStream();
-                rbw2 = new BinaryWriter(rms2);
-                rbr2 = new BinaryReader(rms2);
-
-            }
-
-            
             //switch the packetstream
             packetListTEMP = packetList2;
-            rmsTEMP = rms2;
-            rbwTEMP = rbw2;
-            rbrTEMP = rbr2;
-
 
             lock (_AddPacket_lock)
             {
 
                 packetList2 = packetList1;
-                rms2 = rms1;
-                rbw2 = rbw1;
-                rbr2 = rbr1;
-
                 packetList1 = packetListTEMP;
-                rms1 = rmsTEMP;
-                rbw1 = rbwTEMP;
-                rbr1 = rbrTEMP;
-
             }
-
-
-            rms2.Position = 0;
 
             return packetList2;
         }
@@ -193,12 +138,15 @@ namespace Vaser
         /// <param name="CallEmptyBufferEvent">if true raise an event</param>
         public void SendContainer(Link lnk, Container con, ushort ContainerID, uint ObjectID, bool CallEmptyBufferEvent = false)
         {
-            try {
+            try
+            {
                 //Operating threadsave
                 lock (SendContainer_lock)
                 {
                     if (lnk.IsConnected == false || _sendBW == null) return;
 
+
+                    // write databody
                     counter = 0;
                     Packet_Send spacket = null;
                     if (con != null)
@@ -207,7 +155,7 @@ namespace Vaser
 
                         spacket = con.PackContainer(_sendBW, _sendMS);
                         //big datapacket dedected
-                        if (_sendMS.Position >= Options.MaximumPacketSize)
+                        if (_sendMS.Position >= Options.MaximumPacketSize + 4)
                         {
                             return;
                         }
@@ -216,31 +164,27 @@ namespace Vaser
                             counter = (ushort)_sendMS.Position - 4;
                         }
                     }
-
-                    _sendMS.Position = 0;
-
-                    if (con == null)
+                    else
                     {
                         counter += Options.PacketHeadSize;
                     }
 
-                    if (_sendBW != null)
-                    {
-                        //Debug.WriteLine("Counter: " + counter);
-                        _sendBW.Write(counter);
+                    //write header
+                    _sendMS.Position = 0;
 
-                        _sendBW.Write(this._PID);
-                        _sendBW.Write(ObjectID);
-                        _sendBW.Write(ContainerID);
+                    _sendBW.Write(counter);
 
-                    }
+                    _sendBW.Write(this._PID);
+                    _sendBW.Write(ObjectID);
+                    _sendBW.Write(ContainerID);
+
+
 
                     //Operating threadsave
                     lock (lnk.SendData_Lock)
                     {
                         if (lnk.SendDataPortalArray[_PID] != null)
                         {
-                            //byte[] sendb = ;
                             if (spacket == null)
                             {
                                 spacket = new Packet_Send(_sendMS.ToArray(), CallEmptyBufferEvent);
@@ -251,20 +195,76 @@ namespace Vaser
                                 spacket._CallEmpybuffer = CallEmptyBufferEvent;
                             }
 
+                            lnk.SendDataPortalArray[_PID].Enqueue(spacket);
+                            lnk.Connect.QueueSend();
+                        }
+                    }
 
+                    //reset 
+                    _sendMS.SetLength(0);
+                    //_sendMS.Flush();
+
+                }
+            }
+            catch (Exception es)
+            {
+                Debug.WriteLine("Portal.SendContainer()  > " + es.ToString());
+            }
+        }
+
+        public void DispatchContainer(Link lnk, Packet_Recv packet)
+        {
+            try
+            {
+                //Operating threadsave
+                lock (SendContainer_lock)
+                {
+                    if (lnk.IsConnected == false || _sendBW == null) return;
+
+                    _sendMS.Position = 0;
+                    if (_sendBW != null)
+                    {
+                        if (packet == null)
+                        {
+                            _sendBW.Write(Options.PacketHeadSize);
+
+                            _sendBW.Write(this._PID);
+                            _sendBW.Write(packet.ObjectID);
+                            _sendBW.Write(packet.ContainerID);
+                        }
+                        else
+                        {
+                            _sendBW.Write(packet.Data.Length + Options.PacketHeadSize);
+
+                            _sendBW.Write(this._PID);
+                            _sendBW.Write(packet.ObjectID);
+                            _sendBW.Write(packet.ContainerID);
+
+                            _sendBW.Write(packet.Data);
+                        }
+                    }
+
+                    //Operating threadsave
+                    lock (lnk.SendData_Lock)
+                    {
+                        if (lnk.SendDataPortalArray[_PID] != null)
+                        {
+
+                            Packet_Send spacket = new Packet_Send(_sendMS.ToArray(), false);
 
                             lnk.SendDataPortalArray[_PID].Enqueue(spacket);
-                            lnk.Connect.SendData();
+                            lnk.Connect.QueueSend();
 
                         }
                     }
 
                     //reset 
                     _sendMS.SetLength(0);
-                    _sendMS.Flush();
+                    //_sendMS.Flush();
 
                 }
-            }catch(Exception es)
+            }
+            catch (Exception es)
             {
                 Debug.WriteLine("Portal.SendContainer()  > " + es.ToString());
             }

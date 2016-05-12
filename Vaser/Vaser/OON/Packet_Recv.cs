@@ -28,10 +28,11 @@ namespace Vaser
 
         internal byte ClassID = 0;
 
-        
-        
-        internal long StreamPosition = -1;
-        internal int PacketSize = -1;
+        internal byte[] Data = null;
+
+
+        //internal long StreamPosition = -1;
+        //internal int PacketSize = -1;
 
         internal Packet_Recv(Link ilink, BinaryReader data)
         {

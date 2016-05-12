@@ -20,7 +20,7 @@ namespace test_server
             public int ID = 1;
             public string test = "test text!";
 
-            public byte[] by = new byte[10000];
+            public byte[] by = new byte[1000];
         }
 
         // create new container
@@ -45,8 +45,9 @@ namespace test_server
 
             //initialize the server
             Console.WriteLine("Creating portal: system");
+            system = new Portal(100);
             PortalCollection PC = new PortalCollection();
-            system = PC.CreatePortal(100);
+            PC.RegisterPortal(system);
 
             system.IncomingPacket += OnSystemPacket;
 
@@ -88,7 +89,7 @@ namespace test_server
             VaserServer Server1 = new VaserServer(System.Net.IPAddress.Any, 3100, PC, ssl);
             Server1.NewLink += OnNewLink;
 
-
+            Server1.Start();
 
             Console.WriteLine("");
 
@@ -145,7 +146,7 @@ namespace test_server
             Console.WriteLine("lnk1.Connect.IPv4Address is {0}", e.lnk.IPv4Address.ToString());
 
             testmode = 2;
-            Console.WriteLine("Send 100000 Packets....");
+            Console.WriteLine("Send 1000 Packets....");
             con2.test = "Message ";
 
             try {
@@ -177,18 +178,18 @@ namespace test_server
                     {
                         if (watch.IsRunning == false) watch.Start();
 
-                        if (con3.ID == 10000) Console.WriteLine("Recived " + con3.ID);
-                        if (con3.ID == 25000) Console.WriteLine("Recived " + con3.ID);
-                        if (con3.ID == 50000) Console.WriteLine("Recived " + con3.ID);
-                        if (con3.ID == 75000) Console.WriteLine("Recived " + con3.ID);
-                        if (con3.ID == 100000)
+                        if (con3.ID == 100) Console.WriteLine("Recived " + con3.ID);
+                        if (con3.ID == 250) Console.WriteLine("Recived " + con3.ID);
+                        if (con3.ID == 500) Console.WriteLine("Recived " + con3.ID);
+                        if (con3.ID == 750) Console.WriteLine("Recived " + con3.ID);
+                        if (con3.ID == 1000)
                         {
                             watch.Stop();
                             Console.WriteLine("Recived " + con3.ID);
 
                             Console.WriteLine("Time taken: {0} Milliseconds", watch.ElapsedMilliseconds.ToString());
-                            Console.WriteLine("Transferred: {0} Mbytes", (con3.by.Length * 100000.0) / 1024.0 / 1024.0);
-                            Console.WriteLine("Mirror Transfer rate: {0} Mbytes/second", (1000.0 / (int)watch.ElapsedMilliseconds) * ((con3.by.Length * 100000.0) / 1024.0 / 1024.0));
+                            Console.WriteLine("Transferred: {0} Mbytes", (con3.by.Length * 1000.0) / 1024.0 / 1024.0);
+                            Console.WriteLine("Mirror Transfer rate: {0} Mbytes/second", (1000.0 / (int)watch.ElapsedMilliseconds) * ((con3.by.Length * 1000.0) / 1024.0 / 1024.0));
                             Console.WriteLine("start ping test...");
 
 
@@ -227,7 +228,7 @@ namespace test_server
             {
                 for (int x = 0; x < 10; x++)
                 {
-                    if (con2.ID < 100000)
+                    if (con2.ID < 1000)
                     {
                         con2.ID++;
                         system.SendContainer(test1, con2, 1, 1, true);

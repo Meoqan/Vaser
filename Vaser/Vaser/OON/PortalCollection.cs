@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Diagnostics;
 
 namespace Vaser
 {
@@ -12,43 +13,41 @@ namespace Vaser
     public class PortalCollection
     {
         private object _ListLock = new object();
+        internal volatile bool _Active = false;
+
         internal Portal[] PortalArray = new Portal[256];
 
         /// <summary>
-        /// Creates a new portal.
+        /// Register a Portal.
         /// </summary>
+        /// <param name="p">the portal you want to register</param>
         /// <param name="ID">a channel ID you want to use</param>
-        /// <returns>a portal</returns>
-        public Portal CreatePortal(byte ID)
+        /// <returns></returns>
+        public void RegisterPortal(Portal portal)
         {
-            if (ID < 0 && ID > 255) throw new Exception("Portal ID must be between 0 and 255!");
-
-            Portal port = new Portal(this, ID);
+            if(_Active) throw new Exception("this PortalCollection is in use! please register portals before using");
 
             lock (_ListLock)
             {
-                if (PortalArray[ID] != null) throw new Exception("Portal ID is already used!");
-                PortalArray[ID] = port;
+                if (PortalArray[portal._PID] != null) throw new Exception("Portal ID is already used!");
+                PortalArray[portal._PID] = portal;
             }
-
-            return port;
         }
         
         internal object _GivePacketToClass_lock = new object();
 
-        internal void GivePacketToClass(Packet_Recv pak, byte[] data)
+        internal void GivePacketToClass(Packet_Recv pak)
         {
-            if (pak.ClassID < 0 && pak.ClassID > 255) return;
-
             lock (_GivePacketToClass_lock)
             {
                 Portal clas = PortalArray[pak.ClassID];
                 if (clas != null)
                 {
-                    clas.AddPacket(pak, data);
+                    clas.AddPacket(pak);
                 }
                 else
                 {
+                    Debug.WriteLine("Vaser.Portal> Portal not found.");
                     pak.link.Dispose();
                 }
             }
