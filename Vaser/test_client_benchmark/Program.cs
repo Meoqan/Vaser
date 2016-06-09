@@ -39,38 +39,40 @@ namespace test_client_benchmark
 
 
             Thread.Sleep(1000);
-            
-            while (online)
+
+            //while (online)
+            //{
+            int counter = 0;
+            while (counter < 1000)
             {
+                counter++;
+                Link lnk1 = VaserClient.ConnectClient("localhost", 3100, PC);
+                lnk1.Disconnecting += OnDisconnectingLink;
+                counter++;
+                Link lnk2 = VaserClient.ConnectClient("localhost", 3101, PC);
+                lnk2.Disconnecting += OnDisconnectingLink;
 
-                while (Livinglist.Count < 10)
+                if (lnk1 != null)
                 {
-                    Link lnk1 = VaserClient.ConnectClient("localhost", 3100, PC);
-                    lnk1.Disconnecting += OnDisconnectingLink;
-                    Link lnk2 = VaserClient.ConnectClient("localhost", 3101, PC);
-                    lnk2.Disconnecting += OnDisconnectingLink;
-
-                    if (lnk1 != null)
+                    //Console.WriteLine("1: successfully established connection.");
+                    lock (Livinglist_lock)
                     {
-                        //Console.WriteLine("1: successfully established connection.");
-                        lock (Livinglist_lock)
-                        {
-                            Livinglist.Add(lnk1);
-                        }
-                    }
-                    if (lnk2 != null)
-                    {
-                        //Console.WriteLine("2: successfully established connection.");
-                        lock (Livinglist_lock)
-                        {
-                            Livinglist.Add(lnk2);
-                        }
+                        Livinglist.Add(lnk1);
                     }
                 }
-                
-                Thread.Sleep(1);
-                
+                /*if (lnk2 != null)
+                {
+                    //Console.WriteLine("2: successfully established connection.");
+                    lock (Livinglist_lock)
+                    {
+                        Livinglist.Add(lnk2);
+                    }
+                }*/
             }
+
+            //Thread.Sleep(1);
+            Console.ReadKey();
+            //}
         }
 
         static void OnDisconnectingLink(object p, LinkEventArgs e)

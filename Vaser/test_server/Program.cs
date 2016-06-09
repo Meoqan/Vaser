@@ -210,8 +210,9 @@ namespace test_server
 
                     watch.Stop();
 
-                    Console.WriteLine("responsetime is: {0} Milliseconds", watch.ElapsedMilliseconds.ToString());
-
+                    Console.WriteLine("responsetime is: {0} ElapsedMilliseconds", watch.ElapsedMilliseconds.ToString());
+                    Console.WriteLine("responsetime is: {0} ElapsedTicks", watch.ElapsedTicks.ToString());
+                    Console.WriteLine("{0} TicksPerMillisecond", TimeSpan.TicksPerMillisecond.ToString());
                     Console.WriteLine("Try to close the connection...");
                     testmode = 4;
 

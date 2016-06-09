@@ -29,11 +29,7 @@ namespace Vaser
         public event EventHandler<PacketEventArgs> IncomingPacket;
 
         internal List<Packet_Recv> packetList1 = new List<Packet_Recv>();
-
-        internal List<Packet_Recv> packetListTEMP = null;
-
-        internal List<Packet_Recv> packetList2 = new List<Packet_Recv>();
-
+        
         internal MemoryStream _sendMS = null;
         internal BinaryWriter _sendBW = null;
 
@@ -51,8 +47,10 @@ namespace Vaser
             _PID = PID;
         }
 
-
+        //internal Queue<List<Packet_Recv>> QueueList = new Queue<List<Packet_Recv>>();
         internal object _AddPacket_lock = new object();
+
+
         internal void AddPacket(Packet_Recv pak)
         {
             //operating Threadsafe
@@ -60,13 +58,12 @@ namespace Vaser
             {
                 packetList1.Add(pak);
                 //PacketQueue.Enqueue(pak);
+            }
 
-
-                if (!QueueLock)
-                {
-                    QueueLock = true;
-                    ThreadPool.QueueUserWorkItem(EventWorker);
-                }
+            if (!QueueLock)
+            {
+                QueueLock = true;
+                ThreadPool.QueueUserWorkItem(EventWorker);
             }
         }
 
@@ -77,31 +74,29 @@ namespace Vaser
             //operating Threadsafe
             lock (_EventWorker_lock)
             {
-
-                QueueLock = false;
                 List<Packet_Recv> templist = GetPakets();
-                foreach (Packet_Recv pak in templist)
+                while (templist.Count != 0)
                 {
-                    PacketEventArgs args = new PacketEventArgs();
-                    args.lnk = pak.link;
-                    args.pak = pak;
-                    args.portal = this;
-                    OnIncomingPacket(args);
+                    
+                    foreach (Packet_Recv pak in templist)
+                    {
+                        PacketEventArgs args = new PacketEventArgs();
+                        args.lnk = pak.link;
+                        args.pak = pak;
+                        args.portal = this;
+                        OnIncomingPacket(args);
+                    }
+                    templist = GetPakets();
                 }
-                templist.Clear();
+                
+                //templist.Clear();
             }
         }
 
         protected virtual void OnIncomingPacket(PacketEventArgs e)
         {
 
-            EventHandler<PacketEventArgs> handler = IncomingPacket;
-            if (handler != null)
-            {
-                //Debug.WriteLine("OnIncomingPacket called!");
-                handler(this, e);
-
-            }
+            IncomingPacket?.Invoke(this, e);
         }
 
         /// <summary>
@@ -111,18 +106,17 @@ namespace Vaser
         internal List<Packet_Recv> GetPakets()
         {
             //packetList2.Clear();
-
-            //switch the packetstream
-            packetListTEMP = packetList2;
+            List<Packet_Recv> packetListTEMP = null;
 
             lock (_AddPacket_lock)
             {
 
-                packetList2 = packetList1;
-                packetList1 = packetListTEMP;
+                packetListTEMP = packetList1;
+                packetList1 =  new List<Packet_Recv>();
+                if(packetListTEMP.Count == 0) QueueLock = false;
             }
 
-            return packetList2;
+            return packetListTEMP;
         }
 
 

@@ -17,10 +17,10 @@ namespace Vaser
     /// </summary>
     public class VaserServer
     {
-        private object _ThreadLock = new object();
+        //private object _ThreadLock = new object();
         private TcpListener _TCPListener;
         //private Thread _ListenThread;
-        private bool _ServerOnline = true;
+        private volatile bool _ServerOnline = true;
         private System.Timers.Timer _aTimer;
         private static System.Timers.Timer _GCTimer;
 
@@ -54,35 +54,23 @@ namespace Vaser
         {
             get
             {
-                lock (_ThreadLock)
-                {
-                    return _PCollection;
-                }
+                return _PCollection;
             }
             set
             {
-                lock (_ThreadLock)
-                {
-                    _PCollection = value;
-                }
+                _PCollection = value;
             }
         }
-        
+
         public VaserOptions ServerOption
         {
             get
             {
-                lock (_ThreadLock)
-                {
-                    return _ServerOption;
-                }
+                return _ServerOption;
             }
             set
             {
-                lock (_ThreadLock)
-                {
-                    _ServerOption = value;
-                }
+                _ServerOption = value;
             }
         }
 
@@ -90,17 +78,11 @@ namespace Vaser
         {
             get
             {
-                lock (_ThreadLock)
-                {
-                    return _ConnectionList;
-                }
+                return _ConnectionList;
             }
             set
             {
-                lock (_ThreadLock)
-                {
-                    _ConnectionList = value;
-                }
+                _ConnectionList = value;
             }
         }
 
@@ -109,21 +91,15 @@ namespace Vaser
         {
             get
             {
-                lock (_ThreadLock)
-                {
-                    return _ServerOnline;
-                }
+                return _ServerOnline;
             }
             set
             {
-                lock (_ThreadLock)
+                _ServerOnline = value;
+                if (!_ServerOnline)
                 {
-                    _ServerOnline = value;
-                    if (!_ServerOnline)
-                    {
-                        _aTimer.Enabled = false;
+                    _aTimer.Enabled = false;
 
-                    }
                 }
             }
         }
@@ -133,12 +109,8 @@ namespace Vaser
         /// </summary>
         public void Stop()
         {
-            lock (_ThreadLock)
-            {
-                _ServerOnline = false;
-                _aTimer.Enabled = false;
-
-            }
+            _ServerOnline = false;
+            _aTimer.Enabled = false;
         }
 
         /// <summary>
@@ -159,7 +131,7 @@ namespace Vaser
             try
             {
                 _TCPListener.Start();
-                
+
                 _aTimer = new System.Timers.Timer(5);
                 _aTimer.Elapsed += ListenForClients;
                 _aTimer.AutoReset = true;
@@ -192,14 +164,11 @@ namespace Vaser
 
             try
             {
-                lock (_ThreadLock)
-                {
-                    _ServerOption = VaserOptions.ModeNotEncrypted;
-                    PColl._Active = true;
-                    _PCollection = PColl;
-                    _TCPListener = new TcpListener(LocalAddress, Port);
-                    
-                }
+                ServerOption = VaserOptions.ModeNotEncrypted;
+                PColl.Active = true;
+                PCollection = PColl;
+                _TCPListener = new TcpListener(LocalAddress, Port);
+
             }
             catch (Exception ex)
             {
@@ -221,16 +190,15 @@ namespace Vaser
 
             try
             {
-                lock (_ThreadLock)
-                {
-                    _vKerberos = Kerberos;
-                    _ServerOption = VaserOptions.ModeKerberos;
-                    PColl._Active = true;
-                    _PCollection = PColl;
-                    _TCPListener = new TcpListener(LocalAddress, Port);
-                    
-                }
-            }catch(Exception ex)
+
+                _vKerberos = Kerberos;
+                ServerOption = VaserOptions.ModeKerberos;
+                PColl.Active = true;
+                PCollection = PColl;
+                _TCPListener = new TcpListener(LocalAddress, Port);
+
+            }
+            catch (Exception ex)
             {
                 throw ex;
             }
@@ -249,15 +217,11 @@ namespace Vaser
             if (PColl == null) throw new Exception("PortalCollection is needed!");
             try
             {
-                lock (_ThreadLock)
-                {
-                    _vSSL = SSL;
-                    _ServerOption = VaserOptions.ModeSSL;
-                    PColl._Active = true;
-                    _PCollection = PColl;
-                    _TCPListener = new TcpListener(LocalAddress, Port);
-                    
-                }
+                _vSSL = SSL;
+                ServerOption = VaserOptions.ModeSSL;
+                PColl.Active = true;
+                PCollection = PColl;
+                _TCPListener = new TcpListener(LocalAddress, Port);
             }
             catch (Exception ex)
             {
@@ -278,7 +242,7 @@ namespace Vaser
                 {
 
                     TcpClient Client = _TCPListener.AcceptTcpClient();
-                    
+
                     ThreadPool.QueueUserWorkItem(QueueNewConnection, Client);
 
                 }
@@ -304,13 +268,13 @@ namespace Vaser
                 _TCPListener.Stop();
             }
         }
-        
+
         internal void QueueNewConnection(object Client)
         {
             try
             {
                 Connection con = new Connection((TcpClient)Client, true, _ServerOption, _PCollection, _vKerberos, _vSSL, null, null, this);
-                 
+
                 lock (_ConnectionList_ThreadLock)
                 {
                     _ConnectionList.Add(con);
@@ -319,95 +283,6 @@ namespace Vaser
             catch (Exception e)
             {
                 Debug.WriteLine("ERROR in VaserServer.QueueNewConnection(object Client) > " + e.ToString());
-            }
-        }
-
-        internal void RemoveFromConnectionList(Connection con)
-        {
-            //Console.WriteLine("RemoveFromConnectionList called!");
-            if (con == null) return;
-            lock (_ConnectionList_ThreadLock)
-            {
-                if(_ConnectionList.Contains(con)) _ConnectionList.Remove(con);
-            }
-
-            lock (_DisconnectingLinkList_ThreadLock)
-            {
-                if (!_DisconnectingLinkList.Contains(con.link)) _DisconnectingLinkList.Add(con.link);
-            }
-
-            if (!DisconnectingQueueLock)
-            {
-                DisconnectingQueueLock = true;
-                ThreadPool.QueueUserWorkItem(DisconnectingEventWorker);
-            }
-        }
-        
-        volatile bool NewQueueLock = false;
-        //object _EventWorker_lock = new object();
-        private void NewEventWorker(object threadContext)
-        {
-
-            lock (_NewLinkList_ThreadLock)
-            {
-                NewQueueLock = false;
-                foreach (Link lnk in _NewLinkList)
-                {
-                    LinkEventArgs args = new LinkEventArgs();
-                    args.lnk = lnk;
-
-                    OnNewLink(args);
-                }
-                _NewLinkList.Clear();
-            }
-        }
-
-        protected virtual void OnNewLink(LinkEventArgs e)
-        {
-
-            EventHandler<LinkEventArgs> handler = NewLink;
-            if (handler != null)
-            {
-                //Debug.WriteLine("OnNewLink called!");
-                handler(this, e);
-            }
-        }
-
-        volatile bool DisconnectingQueueLock = false;
-        //object _EventWorker_lock = new object();
-        private void DisconnectingEventWorker(object threadContext)
-        {
-            List<Link> templist = null;
-
-            lock (_DisconnectingLinkList_ThreadLock)
-            {
-                DisconnectingQueueLock = false;
-
-                templist = _DisconnectingLinkList;
-                _DisconnectingLinkList = new List<Link>();
-            }
-
-            foreach (Link lnk in templist)
-            {
-                lnk.Dispose();
-
-                LinkEventArgs args = new LinkEventArgs();
-                args.lnk = lnk;
-
-                OnDisconnectingLink(args);
-            }
-            templist.Clear();
-
-        }
-
-        protected virtual void OnDisconnectingLink(LinkEventArgs e)
-        {
-
-            EventHandler<LinkEventArgs> handler = DisconnectingLink;
-            if (handler != null)
-            {
-                //Debug.WriteLine("OnDisconnectingLink called!");
-                handler(this, e);
             }
         }
 
@@ -424,6 +299,113 @@ namespace Vaser
             }
 
         }
+        volatile bool NewQueueLock = false;
+        private void NewEventWorker(object threadContext)
+        {
+            List<Link> LinkListTEMP = GetNewLinkList();
+            while (LinkListTEMP.Count != 0)
+            {
+                foreach (Link lnk in LinkListTEMP)
+                {
+                    LinkEventArgs args = new LinkEventArgs();
+                    args.lnk = lnk;
+
+                    OnNewLink(args);
+                }
+                LinkListTEMP = GetNewLinkList();
+            }
+
+        }
+
+        private List<Link> GetNewLinkList()
+        {
+            List<Link> LinkListTEMP = null;
+
+            lock (_NewLinkList_ThreadLock)
+            {
+
+                LinkListTEMP = _NewLinkList;
+                _NewLinkList = new List<Link>();
+                if (LinkListTEMP.Count == 0) NewQueueLock = false;
+            }
+
+            return LinkListTEMP;
+        }
+
+        protected virtual void OnNewLink(LinkEventArgs e)
+        {
+
+            NewLink?.Invoke(this, e);
+        }
+
+        internal void RemoveFromConnectionList(Connection con)
+        {
+            //Console.WriteLine("RemoveFromConnectionList called!");
+            if (con == null) return;
+            try
+            {
+                lock (_ConnectionList_ThreadLock)
+                {
+                    _ConnectionList.Remove(con);
+                }
+
+                lock (_DisconnectingLinkList_ThreadLock)
+                {
+                    _DisconnectingLinkList.Add(con.link);
+                }
+
+                if (!DisconnectingQueueLock)
+                {
+                    DisconnectingQueueLock = true;
+                    ThreadPool.QueueUserWorkItem(DisconnectingEventWorker);
+                }
+            }
+            catch { }
+        }
+
+        volatile bool DisconnectingQueueLock = false;
+        private void DisconnectingEventWorker(object threadContext)
+        {
+            List<Link> LinkListTEMP = GetDisconnectingLinkList();
+            while (LinkListTEMP.Count != 0)
+            {
+
+                foreach (Link lnk in LinkListTEMP)
+                {
+                    lnk.Dispose();
+
+                    LinkEventArgs args = new LinkEventArgs();
+                    args.lnk = lnk;
+
+                    OnDisconnectingLink(args);
+                }
+                LinkListTEMP = GetDisconnectingLinkList();
+            }
+
+        }
+
+        private List<Link> GetDisconnectingLinkList()
+        {
+            //packetList2.Clear();
+            List<Link> LinkListTEMP = null;
+
+            lock (_DisconnectingLinkList_ThreadLock)
+            {
+
+                LinkListTEMP = _DisconnectingLinkList;
+                _DisconnectingLinkList = new List<Link>();
+                if (LinkListTEMP.Count == 0) DisconnectingQueueLock = false;
+            }
+
+            return LinkListTEMP;
+        }
+
+        protected virtual void OnDisconnectingLink(LinkEventArgs e)
+        {
+
+            DisconnectingLink?.Invoke(this, e);
+        }
+
     }
 
     public class LinkEventArgs : EventArgs

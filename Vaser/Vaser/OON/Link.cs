@@ -18,7 +18,7 @@ namespace Vaser
         internal static object _Static_ThreadLock = new object();
         private static List<Link> _LinkList = new List<Link>();
 
-        private object _Data_Lock = new object();
+        //private object _Data_Lock = new object();
         private object _Connection_Lock = new object();
         internal object SendData_Lock = new object();
 
@@ -73,17 +73,15 @@ namespace Vaser
         {
             get
             {
-                lock (_Data_Lock)
-                {
-                    return _AttachedObject;
-                }
+
+                return _AttachedObject;
+
             }
             set
             {
-                lock (_Data_Lock)
-                {
-                    _AttachedObject = value;
-                }
+
+                _AttachedObject = value;
+
             }
         }
 
@@ -94,17 +92,11 @@ namespace Vaser
         {
             get
             {
-                lock (_Data_Lock)
-                {
-                    return _AttachedID;
-                }
+                return _AttachedID;
             }
             set
             {
-                lock (_Data_Lock)
-                {
-                    _AttachedID = value;
-                }
+                _AttachedID = value;
             }
         }
 
@@ -115,17 +107,11 @@ namespace Vaser
         {
             get
             {
-                lock(_Data_Lock)
-                {
-                    return _UserName;
-                }
+                return _UserName;
             }
             set
             {
-                lock (_Data_Lock)
-                {
-                    _UserName = value;
-                }
+                _UserName = value;
             }
         }
 
@@ -133,17 +119,11 @@ namespace Vaser
         {
             get
             {
-                lock (_Data_Lock)
-                {
-                    return _IsKerberos;
-                }
+                return _IsKerberos;
             }
             set
             {
-                lock (_Data_Lock)
-                {
-                    _IsKerberos = value;
-                }
+                _IsKerberos = value;
             }
         }
 
@@ -151,17 +131,11 @@ namespace Vaser
         {
             get
             {
-                lock (_Data_Lock)
-                {
-                    return _IsAuthenticated;
-                }
+                return _IsAuthenticated;
             }
             set
             {
-                lock (_Data_Lock)
-                {
-                    _IsAuthenticated = value;
-                }
+                _IsAuthenticated = value;
             }
         }
 
@@ -169,17 +143,11 @@ namespace Vaser
         {
             get
             {
-                lock (_Data_Lock)
-                {
-                    return _IsEncrypted;
-                }
+                return _IsEncrypted;
             }
             set
             {
-                lock (_Data_Lock)
-                {
-                    _IsEncrypted = value;
-                }
+                _IsEncrypted = value;
             }
         }
 
@@ -187,17 +155,11 @@ namespace Vaser
         {
             get
             {
-                lock (_Data_Lock)
-                {
-                    return _IsMutuallyAuthenticated;
-                }
+                return _IsMutuallyAuthenticated;
             }
             set
             {
-                lock (_Data_Lock)
-                {
-                    _IsMutuallyAuthenticated = value;
-                }
+                _IsMutuallyAuthenticated = value;
             }
         }
 
@@ -205,17 +167,11 @@ namespace Vaser
         {
             get
             {
-                lock (_Data_Lock)
-                {
-                    return _IsSigned;
-                }
+                return _IsSigned;
             }
             set
             {
-                lock (_Data_Lock)
-                {
-                    _IsSigned = value;
-                }
+                _IsSigned = value;
             }
         }
 
@@ -223,17 +179,11 @@ namespace Vaser
         {
             get
             {
-                lock (_Data_Lock)
-                {
-                    return _IsServer;
-                }
+                return _IsServer;
             }
             set
             {
-                lock (_Data_Lock)
-                {
-                    _IsServer = value;
-                }
+                _IsServer = value;
             }
         }
 
@@ -244,17 +194,11 @@ namespace Vaser
         {
             get
             {
-                lock(_Static_ThreadLock)
-                {
-                    return _LinkList;
-                }
+                return _LinkList;
             }
             set
             {
-                lock (_Static_ThreadLock)
-                {
-                    _LinkList = value;
-                }
+                _LinkList = value;
             }
         }
 
@@ -262,20 +206,14 @@ namespace Vaser
         {
             get
             {
-                lock (_Connection_Lock)
-                {
-                    return _Connect;
-                }
+                return _Connect;
             }
             set
             {
-                lock (_Connection_Lock)
-                {
-                    _Connect = value;
-                }
+                _Connect = value;
             }
         }
-        
+
         public bool IsConnected
         {
             get
@@ -346,23 +284,13 @@ namespace Vaser
         protected virtual void OnDisconnectingLink(LinkEventArgs e)
         {
 
-            EventHandler<LinkEventArgs> handler = Disconnecting;
-            if (handler != null)
-            {
-                //Console.WriteLine("OnDisconnectingLink called!");
-                handler(this, e);
-            }
+            Disconnecting?.Invoke(this, e);
         }
 
         protected internal virtual void OnEmptyBuffer(LinkEventArgs e)
         {
 
-            EventHandler<LinkEventArgs> handler = EmptyBuffer;
-            if (handler != null)
-            {
-                //Console.WriteLine("OnEmptyBuffer called!");
-                handler(this, e);
-            }
+            EmptyBuffer?.Invoke(this, e);
         }
 
 

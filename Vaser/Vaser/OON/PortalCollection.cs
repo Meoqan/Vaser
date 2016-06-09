@@ -13,7 +13,19 @@ namespace Vaser
     public class PortalCollection
     {
         private object _ListLock = new object();
-        internal volatile bool _Active = false;
+        internal bool _Active = false;
+
+        internal bool Active
+        {
+            get
+            {
+                return _Active;
+            }
+            set
+            {
+                _Active = value;
+            }
+        }
 
         internal Portal[] PortalArray = new Portal[256];
 
@@ -25,7 +37,7 @@ namespace Vaser
         /// <returns></returns>
         public void RegisterPortal(Portal portal)
         {
-            if(_Active) throw new Exception("this PortalCollection is in use! please register portals before using");
+            if(Active) throw new Exception("this PortalCollection is in use! please register portals before using");
 
             lock (_ListLock)
             {

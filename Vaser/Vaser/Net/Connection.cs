@@ -19,7 +19,7 @@ namespace Vaser
     internal class Connection
     {
 
-        private object _Settings_ThreadLock = new object();
+        //private object _Settings_ThreadLock = new object();
         private object _DisposeLock = new object();
         public volatile bool ThreadIsRunning = true;
         public volatile bool StreamIsConnected = true;
@@ -83,17 +83,11 @@ namespace Vaser
         {
             get
             {
-                lock (_Settings_ThreadLock)
-                {
-                    return _IPv4Address;
-                }
+                return _IPv4Address;
             }
             set
             {
-                lock (_Settings_ThreadLock)
-                {
-                    _IPv4Address = value;
-                }
+                _IPv4Address = value;
             }
         }
 
@@ -104,17 +98,11 @@ namespace Vaser
         {
             get
             {
-                lock (_Settings_ThreadLock)
-                {
-                    return _link;
-                }
+                return _link;
             }
             set
             {
-                lock (_Settings_ThreadLock)
-                {
-                    _link = value;
-                }
+                _link = value;
             }
         }
 
@@ -122,17 +110,11 @@ namespace Vaser
         {
             get
             {
-                lock (_Settings_ThreadLock)
-                {
-                    return _server;
-                }
+                return _server;
             }
             set
             {
-                lock (_Settings_ThreadLock)
-                {
-                    _server = value;
-                }
+                _server = value;
             }
         }
 
@@ -371,7 +353,7 @@ namespace Vaser
                                 _AuthStream.AuthenticateAsClient(_vKerberosC._credential, _vKerberosC._binding, _vKerberosC._targetName, _vKerberosC._requiredProtectionLevel, _vKerberosC._requiredImpersonationLevel);
                             }
                         }
-                        
+
                         link.IsAuthenticated = _AuthStream.IsAuthenticated;
                         link.IsEncrypted = _AuthStream.IsEncrypted;
                         link.IsMutuallyAuthenticated = _AuthStream.IsMutuallyAuthenticated;
@@ -513,7 +495,7 @@ namespace Vaser
 
             StreamDecrypt();
         }
-        
+
 
         /// <summary>
         /// Stops the connection
@@ -560,7 +542,7 @@ namespace Vaser
                             _rms1.Flush();
                             _rbw1.Flush();
 
-                            
+
                         }
                         //_ReadStream_Lock.Release();
                         _rms2.Position = 0;

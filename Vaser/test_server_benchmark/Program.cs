@@ -70,7 +70,7 @@ namespace test_server_benchmark
         static void OnNewLinkServer1(object p, LinkEventArgs e)
         {
 
-            //Console.WriteLine("CL1 CON");
+            Console.WriteLine("CL1 CON " + object_counter);
             lock (Livinglist_lock)
             {
                 Livinglist.Add(e.lnk);
@@ -90,7 +90,7 @@ namespace test_server_benchmark
         static void OnNewLinkServer2(object p, LinkEventArgs e)
         {
 
-            //Console.WriteLine("CL1 CON");
+            Console.WriteLine("CL2 CON " + object_counter);
             lock (Livinglist_lock)
             {
                 Livinglist.Add(e.lnk);
