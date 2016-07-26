@@ -118,7 +118,7 @@ namespace Vaser
                     PColl._Active = true;
                     Connection con = new Connection(client, false, VaserOptions.ModeSSL, PColl, null, null, null, SSL);
 
-                    lock(Link._Static_ThreadLock)
+                    lock (Link._Static_ThreadLock)
                     {
                         Link.LinkList.Add(con.link);
                     }

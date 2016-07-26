@@ -31,7 +31,8 @@ namespace Vaser
             try
             {
                 Socket client = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-                client.Connect(IP, Port);
+                Task t = client.ConnectAsync(IP, Port);
+                t.Wait();
                 if (client.Connected)
                 {
                     PColl._Active = true;
@@ -70,9 +71,9 @@ namespace Vaser
 
             try
             {
-                //TcpClient client = new TcpClient();
                 Socket client = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-                client.Connect(IP, Port);
+                Task t = client.ConnectAsync(IP, Port);
+                t.Wait();
                 if (client.Connected)
                 {
                     PColl._Active = true;
@@ -112,7 +113,8 @@ namespace Vaser
             try
             {
                 Socket client = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-                client.Connect(IP, Port);
+                Task t = client.ConnectAsync(IP, Port);
+                t.Wait();
                 if (client.Connected)
                 {
                     PColl._Active = true;

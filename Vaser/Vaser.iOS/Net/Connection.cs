@@ -201,7 +201,7 @@ namespace Vaser
 
         }
 
-        
+
         private void _BootUpTimer_Elapsed(object sender, ElapsedEventArgs e)
         {
             _BootUpTimes++;
@@ -285,29 +285,15 @@ namespace Vaser
                     if (_Mode == VaserOptions.ModeKerberos)
                     {
 
-
-                        if (_vKerberosS._policy == null)
+                        if (_vKerberosS._credential == null)
                         {
-                            if (_vKerberosS._credential == null)
-                            {
-                                _AuthStream.AuthenticateAsServer();
-                            }
-                            else
-                            {
-                                _AuthStream.AuthenticateAsServer(_vKerberosS._credential, _vKerberosS._requiredProtectionLevel, _vKerberosS._requiredImpersonationLevel);
-                            }
+                            _AuthStream.AuthenticateAsServer();
                         }
                         else
                         {
-                            if (_vKerberosS._credential == null)
-                            {
-                                _AuthStream.AuthenticateAsServer(_vKerberosS._policy);
-                            }
-                            else
-                            {
-                                _AuthStream.AuthenticateAsServer(_vKerberosS._credential, _vKerberosS._policy, _vKerberosS._requiredProtectionLevel, _vKerberosS._requiredImpersonationLevel);
-                            }
+                            _AuthStream.AuthenticateAsServer(_vKerberosS._credential, _vKerberosS._requiredProtectionLevel, _vKerberosS._requiredImpersonationLevel);
                         }
+
 
                         link.IsAuthenticated = _AuthStream.IsAuthenticated;
                         link.IsEncrypted = _AuthStream.IsEncrypted;
@@ -351,35 +337,22 @@ namespace Vaser
 
                     if (_Mode == VaserOptions.ModeKerberos)
                     {
-                        if (_vKerberosC._binding == null)
+                        if (_vKerberosC._credential == null)
                         {
-                            if (_vKerberosC._credential == null)
-                            {
-                                _AuthStream.AuthenticateAsClient();
-                            }
-                            else
-                            {
-                                if (_vKerberosC._requiredProtectionLevel == ProtectionLevel.None && _vKerberosC._requiredImpersonationLevel == TokenImpersonationLevel.None)
-                                {
-                                    _AuthStream.AuthenticateAsClient(_vKerberosC._credential, _vKerberosC._targetName);
-                                }
-                                else
-                                {
-                                    _AuthStream.AuthenticateAsClient(_vKerberosC._credential, _vKerberosC._targetName, _vKerberosC._requiredProtectionLevel, _vKerberosC._requiredImpersonationLevel);
-                                }
-                            }
+                            _AuthStream.AuthenticateAsClient();
                         }
                         else
                         {
                             if (_vKerberosC._requiredProtectionLevel == ProtectionLevel.None && _vKerberosC._requiredImpersonationLevel == TokenImpersonationLevel.None)
                             {
-                                _AuthStream.AuthenticateAsClient(_vKerberosC._credential, _vKerberosC._binding, _vKerberosC._targetName);
+                                _AuthStream.AuthenticateAsClient(_vKerberosC._credential, _vKerberosC._targetName);
                             }
                             else
                             {
-                                _AuthStream.AuthenticateAsClient(_vKerberosC._credential, _vKerberosC._binding, _vKerberosC._targetName, _vKerberosC._requiredProtectionLevel, _vKerberosC._requiredImpersonationLevel);
+                                _AuthStream.AuthenticateAsClient(_vKerberosC._credential, _vKerberosC._targetName, _vKerberosC._requiredProtectionLevel, _vKerberosC._requiredImpersonationLevel);
                             }
                         }
+
 
                         link.IsAuthenticated = _AuthStream.IsAuthenticated;
                         link.IsEncrypted = _AuthStream.IsEncrypted;
@@ -415,7 +388,7 @@ namespace Vaser
                     if (_Mode == VaserOptions.ModeKerberos) ThreadPool.QueueUserWorkItem(ReceiveKerberos);
                     if (_Mode == VaserOptions.ModeSSL) ThreadPool.QueueUserWorkItem(ReceiveSSL);
                 }
-                
+
                 _aTimer.Enabled = true;
                 _aTimer.Start();
 
@@ -455,7 +428,7 @@ namespace Vaser
             }
         }
 
-        
+
         private void OnTimedEvent(object source, ElapsedEventArgs e)
         {
             //Debug.WriteLine("Send keep alive packet {0}", e.SignalTime);
@@ -476,7 +449,7 @@ namespace Vaser
             }
         }
 
-        
+
         internal void QueueSendNotEncrypted()
         {
             lock (_link.SendData_Lock)
@@ -718,7 +691,7 @@ namespace Vaser
 
         internal void Dispose()
         {
-            
+
             lock (_DisposeLock)
             {
                 if (Disposed)
@@ -762,7 +735,7 @@ namespace Vaser
                     if (_sslStream != null) _sslStream.Close();
                     _SocketTCPClient.Close();
 
-                   
+
                     mySendNotEncryptedCallback = null;
                     myReceiveNotEncryptedCallback = null;
                     mySendKerberosCallback = null;
@@ -827,7 +800,7 @@ namespace Vaser
             }
             #endregion
 
-            
+
 
             if (link != null)
             {
@@ -1223,7 +1196,7 @@ namespace Vaser
                 return;
             }
 
-            if(GetPackets()) return;
+            if (GetPackets()) return;
 
             lock (_SendDisposelock)
             {

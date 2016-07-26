@@ -1,15 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
-using System.Security.Cryptography.X509Certificates;
 using Vaser;
 using System.Threading;
 
-namespace test_client
+namespace test_CoreClient
 {
-    class Program
+    public class Program
     {
         // Build your data container
         public class TestContainer : Container
@@ -21,10 +19,13 @@ namespace test_client
         }
         // create new container
         static TestContainer con1 = new TestContainer();
-        static void Main(string[] args)
+        public static void Main(string[] args)
         {
+            Run();
+        }
 
-            
+        public static void Run()
+        { 
 
             bool online = true;
 
@@ -35,13 +36,8 @@ namespace test_client
 
             system.IncomingPacket += OnSystemPacket;
 
-
-
-            // ###########################################################
-            // Create a TestCert in CMD: makecert -sr LocalMachine -ss root -r -n "CN=localhost" -sky exchange -sk 123456
+            //Create a TestCert in CMD: makecert -sr LocalMachine -ss root -r -n "CN=localhost" -sky exchange -sk 123456
             // Do not use in Production | do not use localhost -> use your machinename!
-            // ###########################################################
-
 
             /*//Import Test Cert from local store
             X509Certificate2Collection cCollection = new X509Certificate2Collection();
@@ -76,20 +72,19 @@ namespace test_client
             _aTimer.Elapsed += DoPackets;
             _aTimer.AutoReset = true;
             _aTimer.Enabled = true;*/
-            Thread.Sleep(100);
-
-            VaserSSLClient ssl = new VaserSSLClient("localhost");
-            VaserKerberosClient kerberos = new VaserKerberosClient();
-            Link lnk1 = VaserClient.ConnectClient("localhost", 3100, PC, ssl);
+            Thread.Sleep(1000);
+            
+            //VaserSSLClient ssl = new VaserSSLClient("localhost");
+            Link lnk1 = VaserClient.ConnectClient("localhost", 3100, PC);
             lnk1.EmptyBuffer += OnEmptyBuffer;
 
             if (lnk1 != null) Console.WriteLine("1: successfully established connection.");
-            
+
             //working
             if (lnk1.IsConnected) Console.WriteLine("Test. Con OK");
             while (online)
             {
-                
+
                 Thread.Sleep(100);
 
                 //entfernen
@@ -102,6 +97,7 @@ namespace test_client
             Console.ReadKey();
         }
 
+
         static void OnEmptyBuffer(object p, LinkEventArgs e)
         {
             //Console.WriteLine("OnEmptyBuffer called!");
@@ -112,7 +108,7 @@ namespace test_client
             //unpack the packet, true if the decode was successful
             if (con1.UnpackContainer(e.pak, e.portal))
             {
-                //Console.WriteLine("PACK");
+                // Console.WriteLine("PACK");
                 e.portal.SendContainer(e.lnk, con1, 1, 1);
                 //Portal.Finialize();
             }

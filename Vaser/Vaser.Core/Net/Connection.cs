@@ -1,18 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Threading;
 using System.IO;
 using System.Net;
 using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Authentication;
-using System.Security.Principal;
-using System.Security.Cryptography.X509Certificates;
 using System.Diagnostics;
-using System.Timers;
+using System.Threading;
+using System.Security.Principal;
 
 namespace Vaser
 {
@@ -22,11 +17,12 @@ namespace Vaser
         public volatile bool ThreadIsRunning = true;
         public volatile bool StreamIsConnected = true;
         public volatile bool IsServer = false;
-
+        private NetworkStream _ConnectionStream;
         private NegotiateStream _AuthStream;
         private SslStream _sslStream;
-        private Socket _SocketTCPClient;
+        private NetworkStream _NotEncryptedStream;
 
+        private Socket _SocketTCPClient;
         public volatile bool Disposed;
         public volatile bool BootupDone = false;
 
@@ -60,7 +56,6 @@ namespace Vaser
         private BinaryReader _rbr2 = null;
 
         private VaserOptions _Mode = null;
-
         private VaserSSLServer _vSSLS = null;
         private VaserKerberosServer _vKerberosS = null;
         private VaserSSLClient _vSSLC = null;
@@ -69,23 +64,18 @@ namespace Vaser
         private volatile bool IsInQueue = false;
         private volatile bool IsInSendQueue = false;
 
-        private System.Timers.Timer _aTimer;
+        private Timer _aTimer;
 
-        private AsyncCallback mySendNotEncryptedCallback = null;
-        private AsyncCallback myReceiveNotEncryptedCallback = null;
-        private AsyncCallback mySendKerberosCallback = null;
-        private AsyncCallback myReceiveKerberosCallback = null;
-        private AsyncCallback mySendSSLCallback = null;
-        private AsyncCallback myReceiveSSLCallback = null;
-
-        private System.Timers.Timer _BootUpTimer = null;
+        private Timer _BootUpTimer = null;
         private int _BootUpTimes = 0;
 
-        Packet_Send byteData = null;
-        volatile bool _DoDispose = false;
+        private byte[] _timeoutdata = BitConverter.GetBytes((int)(-1));
+        private Packet_Send _timeoutpacket = new Packet_Send(BitConverter.GetBytes((int)(-1)), false);
 
-        private bool SendFound = false;
-        private bool _CallEmptyBuffer = false;
+        Packet_Send byteData = null;
+
+        bool SendFound = false;
+        bool _CallEmptyBuffer = false;
         private object _SendDisposelock = new object();
         private object _ReceiveDisposelock = new object();
 
@@ -93,9 +83,6 @@ namespace Vaser
         private int size = 0;
         private bool action1 = false;
         private bool action2 = false;
-
-        private byte[] _timeoutdata = BitConverter.GetBytes((int)(-1));
-        private Packet_Send _timeoutpacket = new Packet_Send(BitConverter.GetBytes((int)(-1)), false);
 
         internal volatile bool _IsAccepted = false;
 
@@ -160,9 +147,6 @@ namespace Vaser
 
             }
 
-            _aTimer = new System.Timers.Timer(5000);
-            _aTimer.Elapsed += new ElapsedEventHandler(OnTimedEvent);
-
             _Mode = Mode;
             _PCollection = PColl;
 
@@ -175,20 +159,11 @@ namespace Vaser
             _SocketTCPClient = client;
 
             server = srv;
-
+            
             IPv4Address = ((IPEndPoint)client.RemoteEndPoint).Address;
 
             link = new Link(PColl);
             link.Connect = this;
-
-            mySendNotEncryptedCallback = new AsyncCallback(SendNotEncryptedCallback);
-            myReceiveNotEncryptedCallback = new AsyncCallback(ReceiveNotEncryptedCallback);
-
-            mySendKerberosCallback = new AsyncCallback(SendKerberosCallback);
-            myReceiveKerberosCallback = new AsyncCallback(ReceiveKerberosCallback);
-
-            mySendSSLCallback = new AsyncCallback(SendSSLCallback);
-            myReceiveSSLCallback = new AsyncCallback(ReceiveSSLCallback);
 
             if (_IsServer)
             {
@@ -198,11 +173,9 @@ namespace Vaser
             {
                 HandleClientComm(null);
             }
-
         }
 
-        
-        private void _BootUpTimer_Elapsed(object sender, ElapsedEventArgs e)
+        private void _BootUpTimer_Elapsed(object sender)
         {
             _BootUpTimes++;
 
@@ -211,7 +184,7 @@ namespace Vaser
             if (_BootUpTimes > 150)
             {
                 _BootUpTimes = 0;
-                _BootUpTimer.Stop();
+                _BootUpTimer.Dispose();
 
                 lock (_ReceiveDisposelock)
                 {
@@ -219,17 +192,19 @@ namespace Vaser
                     {
                         try
                         {
-                            _SocketTCPClient.Close();
+                            _SocketTCPClient.Dispose();
+
+                            _ConnectionStream.Dispose();
 
                             // encryption
                             if (_Mode == VaserOptions.ModeKerberos && _AuthStream != null)
                             {
-                                _AuthStream.Close();
+                                _AuthStream.Dispose();
                             }
 
                             if (_Mode == VaserOptions.ModeSSL && _sslStream != null)
                             {
-                                _sslStream.Close();
+                                _sslStream.Dispose();
                             }
 
                         }
@@ -250,32 +225,33 @@ namespace Vaser
             //This conntects the client
             //first we need an rescue timer
 
-            _BootUpTimer = new System.Timers.Timer(100);
-            _BootUpTimer.Enabled = true;
-            _BootUpTimer.Elapsed += _BootUpTimer_Elapsed;
-            _BootUpTimer.Start();
+            _BootUpTimer = new Timer(new TimerCallback(_BootUpTimer_Elapsed), null, 0, 100);
 
             bool leaveInnerStreamOpen = false;
 
             try
             {
+                
+                _ConnectionStream = new NetworkStream(_SocketTCPClient);
+
 
                 // encryption
                 if (_Mode == VaserOptions.ModeKerberos)
                 {
                     QueueSend = QueueSendKerberos;
-                    _AuthStream = new NegotiateStream(new NetworkStream(_SocketTCPClient), leaveInnerStreamOpen);
+                    _AuthStream = new NegotiateStream(_ConnectionStream, leaveInnerStreamOpen);
                 }
 
                 if (_Mode == VaserOptions.ModeSSL)
                 {
                     QueueSend = QueueSendSSL;
-                    _sslStream = new SslStream(new NetworkStream(_SocketTCPClient), leaveInnerStreamOpen);
+                    _sslStream = new SslStream(_ConnectionStream, leaveInnerStreamOpen);
                 }
 
                 if (_Mode == VaserOptions.ModeNotEncrypted)
                 {
                     QueueSend = QueueSendNotEncrypted;
+                    _NotEncryptedStream = _ConnectionStream;
                 }
 
                 if (IsServer)
@@ -290,22 +266,22 @@ namespace Vaser
                         {
                             if (_vKerberosS._credential == null)
                             {
-                                _AuthStream.AuthenticateAsServer();
+                                _AuthStream.AuthenticateAsServerAsync();
                             }
                             else
                             {
-                                _AuthStream.AuthenticateAsServer(_vKerberosS._credential, _vKerberosS._requiredProtectionLevel, _vKerberosS._requiredImpersonationLevel);
+                                _AuthStream.AuthenticateAsServerAsync(_vKerberosS._credential, _vKerberosS._requiredProtectionLevel, _vKerberosS._requiredImpersonationLevel);
                             }
                         }
                         else
                         {
                             if (_vKerberosS._credential == null)
                             {
-                                _AuthStream.AuthenticateAsServer(_vKerberosS._policy);
+                                _AuthStream.AuthenticateAsServerAsync(_vKerberosS._policy);
                             }
                             else
                             {
-                                _AuthStream.AuthenticateAsServer(_vKerberosS._credential, _vKerberosS._policy, _vKerberosS._requiredProtectionLevel, _vKerberosS._requiredImpersonationLevel);
+                                _AuthStream.AuthenticateAsServerAsync(_vKerberosS._credential, _vKerberosS._policy, _vKerberosS._requiredProtectionLevel, _vKerberosS._requiredImpersonationLevel);
                             }
                         }
 
@@ -325,11 +301,11 @@ namespace Vaser
                     {
                         if (_vSSLS._enabledSslProtocols == SslProtocols.None)
                         {
-                            _sslStream.AuthenticateAsServer(_vSSLS._serverCertificate);
+                            _sslStream.AuthenticateAsServerAsync(_vSSLS._serverCertificate);
                         }
                         else
                         {
-                            _sslStream.AuthenticateAsServer(_vSSLS._serverCertificate, _vSSLS._clientCertificateRequired, _vSSLS._enabledSslProtocols, _vSSLS._checkCertificateRevocation);
+                            _sslStream.AuthenticateAsServerAsync(_vSSLS._serverCertificate, _vSSLS._clientCertificateRequired, _vSSLS._enabledSslProtocols, _vSSLS._checkCertificateRevocation);
                         }
 
                         link.IsEncrypted = true;
@@ -355,17 +331,17 @@ namespace Vaser
                         {
                             if (_vKerberosC._credential == null)
                             {
-                                _AuthStream.AuthenticateAsClient();
+                                _AuthStream.AuthenticateAsClientAsync();
                             }
                             else
                             {
                                 if (_vKerberosC._requiredProtectionLevel == ProtectionLevel.None && _vKerberosC._requiredImpersonationLevel == TokenImpersonationLevel.None)
                                 {
-                                    _AuthStream.AuthenticateAsClient(_vKerberosC._credential, _vKerberosC._targetName);
+                                    _AuthStream.AuthenticateAsClientAsync(_vKerberosC._credential, _vKerberosC._targetName);
                                 }
                                 else
                                 {
-                                    _AuthStream.AuthenticateAsClient(_vKerberosC._credential, _vKerberosC._targetName, _vKerberosC._requiredProtectionLevel, _vKerberosC._requiredImpersonationLevel);
+                                    _AuthStream.AuthenticateAsClientAsync(_vKerberosC._credential, _vKerberosC._targetName, _vKerberosC._requiredProtectionLevel, _vKerberosC._requiredImpersonationLevel);
                                 }
                             }
                         }
@@ -373,11 +349,11 @@ namespace Vaser
                         {
                             if (_vKerberosC._requiredProtectionLevel == ProtectionLevel.None && _vKerberosC._requiredImpersonationLevel == TokenImpersonationLevel.None)
                             {
-                                _AuthStream.AuthenticateAsClient(_vKerberosC._credential, _vKerberosC._binding, _vKerberosC._targetName);
+                                _AuthStream.AuthenticateAsClientAsync(_vKerberosC._credential, _vKerberosC._binding, _vKerberosC._targetName);
                             }
                             else
                             {
-                                _AuthStream.AuthenticateAsClient(_vKerberosC._credential, _vKerberosC._binding, _vKerberosC._targetName, _vKerberosC._requiredProtectionLevel, _vKerberosC._requiredImpersonationLevel);
+                                _AuthStream.AuthenticateAsClientAsync(_vKerberosC._credential, _vKerberosC._binding, _vKerberosC._targetName, _vKerberosC._requiredProtectionLevel, _vKerberosC._requiredImpersonationLevel);
                             }
                         }
 
@@ -396,11 +372,11 @@ namespace Vaser
 
                         if (_vSSLC._clientCertificates == null)
                         {
-                            _sslStream.AuthenticateAsClient(_vSSLC._targetHost);
+                            _sslStream.AuthenticateAsClientAsync(_vSSLC._targetHost);
                         }
                         else
                         {
-                            _sslStream.AuthenticateAsClient(_vSSLC._targetHost, _vSSLC._clientCertificates, _vSSLC._enabledSslProtocols, _vSSLC._checkCertificateRevocation);
+                            _sslStream.AuthenticateAsClientAsync(_vSSLC._targetHost, _vSSLC._clientCertificates, _vSSLC._enabledSslProtocols, _vSSLC._checkCertificateRevocation);
                         }
 
 
@@ -415,15 +391,14 @@ namespace Vaser
                     if (_Mode == VaserOptions.ModeKerberos) ThreadPool.QueueUserWorkItem(ReceiveKerberos);
                     if (_Mode == VaserOptions.ModeSSL) ThreadPool.QueueUserWorkItem(ReceiveSSL);
                 }
-                
-                _aTimer.Enabled = true;
-                _aTimer.Start();
+
+                _aTimer = new Timer(new TimerCallback(OnTimedEvent), null, 0, 5000);
 
             }
             catch (AuthenticationException e)
             {
                 Debug.WriteLine("Authentication failed. " + e.ToString());
-                _BootUpTimer.Stop();
+                _BootUpTimer.Dispose();
 
                 Dispose();
                 return;
@@ -431,14 +406,12 @@ namespace Vaser
             catch (Exception e)
             {
                 Debug.WriteLine("Authentication failed. " + e.ToString());
-                _BootUpTimer.Stop();
+                _BootUpTimer.Dispose();
 
                 Dispose();
                 return;
             }
             // encryption END
-
-            _BootUpTimer.Stop();
             _BootUpTimer.Dispose();
             _BootUpTimer = null;
         }
@@ -448,7 +421,6 @@ namespace Vaser
             if (_IsAccepted == false)
             {
                 _IsAccepted = true;
-                //new Thread(Receive).Start();
                 if (_Mode == VaserOptions.ModeNotEncrypted) ThreadPool.QueueUserWorkItem(ReceiveNotEncrypted);
                 if (_Mode == VaserOptions.ModeKerberos) ThreadPool.QueueUserWorkItem(ReceiveKerberos);
                 if (_Mode == VaserOptions.ModeSSL) ThreadPool.QueueUserWorkItem(ReceiveSSL);
@@ -456,7 +428,7 @@ namespace Vaser
         }
 
         
-        private void OnTimedEvent(object source, ElapsedEventArgs e)
+        private void OnTimedEvent(object source)
         {
             //Debug.WriteLine("Send keep alive packet {0}", e.SignalTime);
             lock (_link.SendData_Lock)
@@ -476,7 +448,6 @@ namespace Vaser
             }
         }
 
-        
         internal void QueueSendNotEncrypted()
         {
             lock (_link.SendData_Lock)
@@ -631,7 +602,7 @@ namespace Vaser
                                             // if the Packetsize is beond the limits, terminate the connection. maybe a Hacking attempt?
                                             if (size > Options.MaximumPacketSize || size < Options.PacketHeadSize)
                                             {
-                                                Debug.WriteLine("The Size was: " + size + " > the Packetsize is beond the limits, terminate the connection. maybe a Hacking attempt?");
+                                                //Debug.WriteLine("The Size was: " + size + " > the Packetsize is beond the limits, terminate the connection. maybe a Hacking attempt?");
                                                 this.Stop();
                                                 mode = 100;
                                                 break;
@@ -700,27 +671,11 @@ namespace Vaser
 
 
 
-
-        private static void DisconnectCallback(IAsyncResult ar)
-        {
-            try
-            {
-                // Complete the disconnect request.
-                Socket client = (Socket)ar.AsyncState;
-                client.EndDisconnect(ar);
-                Debug.WriteLine("Disconnected.");
-            }
-            catch (Exception e)
-            {
-                Debug.WriteLine("Connection.DisconnectCallback()  >" + e.ToString());
-            }
-        }
-
         internal void Dispose()
         {
-            
             lock (_DisposeLock)
             {
+
                 if (Disposed)
                 {
                     return;
@@ -729,14 +684,12 @@ namespace Vaser
                 {
                     Disposed = true;
                 }
-
                 StreamIsConnected = false;
                 ThreadIsRunning = false;
             }
 
             if (server != null) server.RemoveFromConnectionList(this);
 
-            _aTimer.Stop();
             _aTimer.Dispose();
             _aTimer = null;
 
@@ -744,8 +697,7 @@ namespace Vaser
             {
                 lock (_SendDisposelock)
                 {
-
-                    if (_SocketTCPClient != null)
+                    if (_SocketTCPClient != null && _SocketTCPClient.Connected)
                     {
                         try
                         {
@@ -758,25 +710,14 @@ namespace Vaser
 
                     }
 
-                    if (_AuthStream != null) _AuthStream.Close();
-                    if (_sslStream != null) _sslStream.Close();
-                    _SocketTCPClient.Close();
-
-                   
-                    mySendNotEncryptedCallback = null;
-                    myReceiveNotEncryptedCallback = null;
-                    mySendKerberosCallback = null;
-                    myReceiveKerberosCallback = null;
-                    mySendSSLCallback = null;
-                    myReceiveSSLCallback = null;
-
+                    if (_AuthStream != null) _AuthStream.Dispose();
+                    if (_sslStream != null) _sslStream.Dispose();
+                    _ConnectionStream.Dispose();
                 }
             }
 
+            
 
-
-
-            #region WorkAtStreamDispose
             lock (_WorkAtStream_Lock)
             {
 
@@ -793,7 +734,7 @@ namespace Vaser
                     }
                     catch (Exception e)
                     {
-                        //Debug.WriteLine("Connection.Dispose()  > " + e.ToString());
+                        Debug.WriteLine("Connection.Dispose()  > " + e.ToString());
                     }
 
                     try
@@ -806,7 +747,7 @@ namespace Vaser
                     }
                     catch (Exception e)
                     {
-                        //Debug.WriteLine("Connection.Dispose()  > " + e.ToString());
+                        Debug.WriteLine("Connection.Dispose()  > " + e.ToString());
                     }
 
                     try
@@ -821,11 +762,12 @@ namespace Vaser
                     }
                     catch (Exception e)
                     {
-                        //Debug.WriteLine("Connection.Dispose()  > " + e.ToString());
+                        Debug.WriteLine("Connection.Dispose()  > " + e.ToString());
                     }
+
+
                 }
             }
-            #endregion
 
             
 
@@ -834,230 +776,74 @@ namespace Vaser
                 link.Dispose();
                 link = null;
             }
+
+            Debug.WriteLine("Link.Dispose finished");
+
         }
 
 
 
-
-
-        #region Receive
-
-
-        internal void ReceiveNotEncrypted(Object threadContext)
+        internal async void ReceiveNotEncrypted(object state)
         {
-            lock (_ReceiveDisposelock)
+            try
             {
-                if (StreamIsConnected)
+                while (true)
                 {
-                    //if (doubbleDedectionRead) Console.WriteLine("?????????????????????????????????????????????????????????????????????");
-                    //doubbleDedectionRead = true;
-                    try
-                    {
-                        _SocketTCPClient.BeginReceive(_buff, 0, _buff.Length, 0, myReceiveNotEncryptedCallback, _SocketTCPClient);
-                    }
-                    catch (Exception esf)
-                    {
-                        StreamIsConnected = false;
-                        _DoDispose = true;
-                    }
+                    bytesRead = await _NotEncryptedStream.ReadAsync(_buff, 0, _buff.Length);
+                    WritePackets();
                 }
             }
-            if (_DoDispose)
+            catch (Exception e)
             {
+                StreamIsConnected = false;
                 Dispose();
+
+                Debug.WriteLine("Connection.Receive()  >" + e.ToString());
+                //if (e.InnerException != null) Console.WriteLine("Inner exception: {0}", e.InnerException);
             }
         }
 
-        private void ReceiveNotEncryptedCallback(IAsyncResult iar)
+        internal async void ReceiveSSL(object state)
         {
-            lock (_ReceiveDisposelock)
+            try
             {
-                if (StreamIsConnected)
+                while (true)
                 {
-                    try
-                    {
-                        bytesRead = _SocketTCPClient.EndReceive(iar);
-                        //doubbleDedectionRead = false;
-                    }
-                    catch (Exception esf)
-                    {
-                        StreamIsConnected = false;
-                        _DoDispose = true;
-                    }
+                    bytesRead = await _sslStream.ReadAsync(_buff, 0, _buff.Length);
+                    WritePackets();
                 }
             }
-
-            WritePackets();
-
-            lock (_ReceiveDisposelock)
+            catch (Exception e)
             {
-                if (StreamIsConnected)
-                {
-                    //if (doubbleDedectionRead) Console.WriteLine("?????????????????????????????????????????????????????????????????????");
-                    //doubbleDedectionRead = true;
-                    try
-                    {
-                        _SocketTCPClient.BeginReceive(_buff, 0, _buff.Length, 0, myReceiveNotEncryptedCallback, _SocketTCPClient);
-                    }
-                    catch (Exception esf)
-                    {
-                        StreamIsConnected = false;
-                        _DoDispose = true;
-                    }
-                }
-            }
-
-            if (_DoDispose)
-            {
+                StreamIsConnected = false;
                 Dispose();
+
+                Debug.WriteLine("Connection.Receive()  >" + e.ToString());
+                //if (e.InnerException != null) Console.WriteLine("Inner exception: {0}", e.InnerException);
             }
         }
 
-        internal void ReceiveSSL(Object threadContext)
+        internal async void ReceiveKerberos(object state)
         {
-            lock (_ReceiveDisposelock)
+            //Console.WriteLine("Receive");
+            try
             {
-                if (StreamIsConnected)
+                while (true)
                 {
-                    //if (doubbleDedectionRead) Console.WriteLine("?????????????????????????????????????????????????????????????????????");
-                    //doubbleDedectionRead = true;
-                    try
-                    {
-                        _sslStream.BeginRead(_buff, 0, _buff.Length, myReceiveSSLCallback, _sslStream);
-                    }
-                    catch (Exception esf)
-                    {
-                        StreamIsConnected = false;
-                        _DoDispose = true;
-                    }
+                    
+                    bytesRead = await _AuthStream.ReadAsync(_buff, 0, _buff.Length);
+                    WritePackets();
                 }
             }
-            if (_DoDispose)
+            catch (Exception e)
             {
+                StreamIsConnected = false;
                 Dispose();
+
+                Debug.WriteLine("Connection.Receive()  >" + e.ToString());
+                //if (e.InnerException != null) Console.WriteLine("Inner exception: {0}", e.InnerException);
             }
         }
-
-        private void ReceiveSSLCallback(IAsyncResult iar)
-        {
-            lock (_ReceiveDisposelock)
-            {
-                if (StreamIsConnected)
-                {
-                    try
-                    {
-                        //Socket sendingSocket = (Socket)iar.AsyncState;
-                        bytesRead = _sslStream.EndRead(iar);
-                        //doubbleDedectionRead = false;
-                    }
-                    catch (Exception esf)
-                    {
-                        StreamIsConnected = false;
-                        _DoDispose = true;
-                    }
-                }
-            }
-
-            WritePackets();
-
-            lock (_ReceiveDisposelock)
-            {
-                if (StreamIsConnected)
-                {
-                    //if (doubbleDedectionRead) Console.WriteLine("?????????????????????????????????????????????????????????????????????");
-                    //doubbleDedectionRead = true;
-                    try
-                    {
-                        _sslStream.BeginRead(_buff, 0, _buff.Length, myReceiveSSLCallback, _sslStream);
-                    }
-                    catch (Exception esf)
-                    {
-                        StreamIsConnected = false;
-                        _DoDispose = true;
-                    }
-                }
-            }
-
-            if (_DoDispose)
-            {
-                Dispose();
-            }
-        }
-
-        internal void ReceiveKerberos(Object threadContext)
-        {
-            lock (_ReceiveDisposelock)
-            {
-                if (StreamIsConnected)
-                {
-                    //if (doubbleDedectionRead) Console.WriteLine("?????????????????????????????????????????????????????????????????????");
-                    //doubbleDedectionRead = true;
-                    try
-                    {
-                        _AuthStream.BeginRead(_buff, 0, _buff.Length, myReceiveKerberosCallback, _AuthStream);
-                    }
-                    catch (Exception esf)
-                    {
-                        StreamIsConnected = false;
-                        _DoDispose = true;
-                    }
-                }
-            }
-            if (_DoDispose)
-            {
-                Dispose();
-            }
-        }
-
-        private void ReceiveKerberosCallback(IAsyncResult iar)
-        {
-            lock (_ReceiveDisposelock)
-            {
-                if (StreamIsConnected)
-                {
-                    try
-                    {
-                        //Socket sendingSocket = (Socket)iar.AsyncState;
-                        bytesRead = _AuthStream.EndRead(iar);
-                        //doubbleDedectionRead = false;
-                    }
-                    catch (Exception esf)
-                    {
-                        StreamIsConnected = false;
-                        _DoDispose = true;
-                    }
-                }
-            }
-
-            WritePackets();
-
-
-            lock (_ReceiveDisposelock)
-            {
-                if (StreamIsConnected)
-                {
-                    //if (doubbleDedectionRead) Console.WriteLine("?????????????????????????????????????????????????????????????????????");
-                    //doubbleDedectionRead = true;
-                    try
-                    {
-                        _AuthStream.BeginRead(_buff, 0, _buff.Length, myReceiveKerberosCallback, _AuthStream);
-                    }
-                    catch (Exception esf)
-                    {
-                        StreamIsConnected = false;
-                        _DoDispose = true;
-                    }
-                }
-            }
-
-            if (_DoDispose)
-            {
-                Dispose();
-            }
-        }
-
-        #endregion
-
 
         private void WritePackets()
         {
@@ -1075,8 +861,6 @@ namespace Vaser
             }
         }
 
-        #region Send
-
         // *********************************************************
         // WARNING: if you get an AccessValidation error, check following:
         // - do you try to send data to a connecting or closed stream?
@@ -1084,201 +868,95 @@ namespace Vaser
         // - do you try to send and receive data with the same thread?
         // - RTFM! No no no, listen READ THE F MANUAL: https://msdn.microsoft.com/de-de/library/fx6588te%28v=vs.110%29.aspx
         // *********************************************************
-        internal void SendNotEncrypted(Object threadContext)
+        internal async void SendNotEncrypted(Object threadContext)
         {
             if (!BootupDone) throw new Exception("Data was send b4 connection was booted.");
-
-            if (!StreamIsConnected)
+            try
             {
-                //Dispose();
-                return;
-            }
 
-            if (GetPackets()) return;
-
-            lock (_SendDisposelock)
-            {
-                if (StreamIsConnected)
+                while (StreamIsConnected)
                 {
-                    //if (doubbleDedection) Console.WriteLine("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-                    //doubbleDedection = true;
-                    try
+                    if (GetPackets()) return;
+
+                    if (!StreamIsConnected) return;
+
+                    if (_NotEncryptedStream != null && _NotEncryptedStream.CanWrite && _SocketTCPClient.Connected)
                     {
-                        _SocketTCPClient.BeginSend(byteData._SendData, 0, byteData._SendData.Length, 0, mySendNotEncryptedCallback, _SocketTCPClient);
+                        await _NotEncryptedStream.WriteAsync(byteData._SendData, 0, byteData._SendData.Length);
                     }
-                    catch (Exception esf)
-                    {
-                        StreamIsConnected = false;
-                        _DoDispose = true;
-                    }
+
+
                 }
             }
-            if (_DoDispose)
+            catch (Exception e)
             {
+                StreamIsConnected = false;
                 Dispose();
+
+                Debug.WriteLine("Connection.Send()  >" + e.ToString());
+                //if (e.InnerException != null) Console.WriteLine("Inner exception: {0}", e.InnerException);
             }
         }
 
-        private void SendNotEncryptedCallback(IAsyncResult iar)
-        {
-            lock (_SendDisposelock)
-            {
-                if (StreamIsConnected)
-                {
-                    try
-                    {
-                        _SocketTCPClient.EndSend(iar);
-                        //doubbleDedection = false;
-                    }
-                    catch (Exception esf)
-                    {
-                        StreamIsConnected = false;
-                        _DoDispose = true;
-                    }
-                }
-            }
-
-            if (_DoDispose)
-            {
-                Dispose();
-            }
-            else
-            {
-                // Contiue sending...
-                SendNotEncrypted(null);
-            }
-        }
-
-
-        internal void SendKerberos(Object threadContext)
+        internal async void SendKerberos(Object threadContext)
         {
             if (!BootupDone) throw new Exception("Data was send b4 connection was booted.");
-
-            if (!StreamIsConnected)
+            try
             {
-                return;
-            }
 
-            if (GetPackets()) return;
-
-            lock (_SendDisposelock)
-            {
-                if (StreamIsConnected)
+                while (StreamIsConnected)
                 {
-                    //if (doubbleDedection) Console.WriteLine("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-                    //doubbleDedection = true;
-                    try
+                    if (GetPackets()) return;
+
+                    if (!StreamIsConnected) return;
+
+                    if (_AuthStream != null && _AuthStream.CanWrite && _SocketTCPClient.Connected)
                     {
-                        _AuthStream.BeginWrite(byteData._SendData, 0, byteData._SendData.Length, mySendKerberosCallback, _AuthStream);
+                        await _AuthStream.WriteAsync(byteData._SendData, 0, byteData._SendData.Length);
                     }
-                    catch (Exception esf)
-                    {
-                        StreamIsConnected = false;
-                        _DoDispose = true;
-                    }
+
                 }
             }
-            if (_DoDispose)
+            catch (Exception e)
             {
+                StreamIsConnected = false;
                 Dispose();
+
+                Debug.WriteLine("Connection.Send()  >" + e.ToString());
+                //if (e.InnerException != null) Console.WriteLine("Inner exception: {0}", e.InnerException);
             }
         }
 
-        private void SendKerberosCallback(IAsyncResult iar)
-        {
-            lock (_SendDisposelock)
-            {
-                if (StreamIsConnected)
-                {
-                    try
-                    {
-                        _AuthStream.EndWrite(iar);
-                        //doubbleDedection = false;
-                    }
-                    catch (Exception esf)
-                    {
-                        StreamIsConnected = false;
-                        _DoDispose = true;
-                    }
-                }
-            }
-
-            if (_DoDispose)
-            {
-                Dispose();
-            }
-            else
-            {
-                // Contiue sending...
-                SendKerberos(null);
-            }
-        }
-
-        internal void SendSSL(Object threadContext)
+        internal async void SendSSL(Object threadContext)
         {
             if (!BootupDone) throw new Exception("Data was send b4 connection was booted.");
-
-            if (!StreamIsConnected)
+            try
             {
-                return;
-            }
 
-            if(GetPackets()) return;
-
-            lock (_SendDisposelock)
-            {
-                if (StreamIsConnected)
+                while (StreamIsConnected)
                 {
-                    //if (doubbleDedection) Console.WriteLine("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-                    //doubbleDedection = true;
-                    try
+                    if (GetPackets()) return;
+
+                    if (!StreamIsConnected) return;
+
+                    if (_sslStream != null && _sslStream.CanWrite && _SocketTCPClient.Connected)
                     {
-                        _sslStream.BeginWrite(byteData._SendData, 0, byteData._SendData.Length, mySendSSLCallback, _sslStream);
+                        await _sslStream.WriteAsync(byteData._SendData, 0, byteData._SendData.Length);
                     }
-                    catch (Exception esf)
-                    {
-                        StreamIsConnected = false;
-                        _DoDispose = true;
-                    }
+                    
+
                 }
             }
-            if (_DoDispose)
+            catch (Exception e)
             {
+                StreamIsConnected = false;
                 Dispose();
+
+                Debug.WriteLine("Connection.Send()  >" + e.ToString());
+                //if (e.InnerException != null) Console.WriteLine("Inner exception: {0}", e.InnerException);
             }
         }
 
-        private void SendSSLCallback(IAsyncResult iar)
-        {
-            lock (_SendDisposelock)
-            {
-                if (StreamIsConnected)
-                {
-                    try
-                    {
-                        _sslStream.EndWrite(iar);
-                        //doubbleDedection = false;
-                    }
-                    catch (Exception esf)
-                    {
-                        StreamIsConnected = false;
-                        _DoDispose = true;
-                    }
-                }
-            }
-
-            if (_DoDispose)
-            {
-                Dispose();
-            }
-            else
-            {
-                // Contiue sending...
-                SendSSL(null);
-            }
-        }
-
-        #endregion
 
         private bool GetPackets()
         {
@@ -1336,6 +1014,7 @@ namespace Vaser
                 return false;
             }
         }
+
     }
 
 }

@@ -1,14 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
-using System.Text;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Diagnostics;
-using System.Security.Cryptography.X509Certificates;
 using Vaser;
 
-namespace test_server
+namespace test_CoreServer
 {
     public class Program
     {
@@ -29,7 +28,12 @@ namespace test_server
         static Stopwatch watch = new Stopwatch();
         static Link test1 = null;
         static Portal system = null;
-        static void Main(string[] args)
+        public static void Main(string[] args)
+        {
+            Run();
+        }
+
+        public static void Run()
         {
 
             Console.WriteLine("Welcome to the Vaser testengine");
@@ -51,23 +55,17 @@ namespace test_server
 
             system.IncomingPacket += OnSystemPacket;
 
-
-
-            // ###########################################################
-            // Create a TestCert in CMD: makecert -sr LocalMachine -ss root -r -n "CN=localhost" -sky exchange -sk 123456
+            //Create a TestCert in CMD: makecert -sr LocalMachine -ss root -r -n "CN=localhost" -sky exchange -sk 123456
             // Do not use in Production | do not use localhost -> use your machinename!
-            // ###########################################################
 
-
-
-            Console.WriteLine("Import Test Cert");
+            /*Console.WriteLine("Import Test Cert");
             //Import Test Cert
             X509Certificate2 cert = new X509Certificate2();
 
             X509Store store = new X509Store(StoreName.Root, StoreLocation.LocalMachine);
             store.Open(OpenFlags.ReadOnly);
             var certificates = store.Certificates.Find(X509FindType.FindBySubjectDistinguishedName, "CN=localhost", false);
-            store.Close();
+            store.Dispose();
 
             if (certificates.Count == 0)
             {
@@ -87,13 +85,12 @@ namespace test_server
             // Get the value.
             string resultsFalse = cert.ToString(false);
             // Display the value to the console.
-            Console.WriteLine(resultsFalse);
+            Console.WriteLine(resultsFalse);*/
 
             //start the server
             Console.WriteLine("Creating server: IPAddress any, Port 3100, VaserMode ModeSSL");
-            VaserSSLServer ssl = new VaserSSLServer(certificates[0]);
-            VaserKerberosServer kerberos = new VaserKerberosServer();
-            VaserServer Server1 = new VaserServer(System.Net.IPAddress.Any, 3100, PC, ssl);
+            //VaserSSLServer ssl = new VaserSSLServer(certificates[0]);
+            VaserServer Server1 = new VaserServer(System.Net.IPAddress.Any, 3100, PC);
             Server1.NewLink += OnNewLink;
 
             Server1.Start();
@@ -147,7 +144,7 @@ namespace test_server
 
             e.lnk.EmptyBuffer += OnEmptyBuffer;
             e.lnk.Accept();
-            
+
             Console.WriteLine("Reading metadata from Link:");
             Console.WriteLine("lnk1.Connect.StreamIsConnected is {0}", e.lnk.IsConnected.ToString());
             Console.WriteLine("lnk1.Connect.IPv4Address is {0}", e.lnk.IPv4Address.ToString());
@@ -156,7 +153,8 @@ namespace test_server
             Console.WriteLine("Send 1000 Packets....");
             con2.test = "Message ";
 
-            try {
+            try
+            {
                 lock (Buffer_lock)
                 {
                     for (int x = 0; x < 10; x++)
@@ -166,7 +164,8 @@ namespace test_server
                     }
                     //Portal.Finialize();
                 }
-            }catch(Exception es)
+            }
+            catch (Exception es)
             {
                 Console.WriteLine(es.ToString());
             }
@@ -247,4 +246,3 @@ namespace test_server
         }
     }
 }
-

@@ -29,7 +29,7 @@ namespace Vaser
         public event EventHandler<PacketEventArgs> IncomingPacket;
 
         internal List<Packet_Recv> packetList1 = new List<Packet_Recv>();
-        
+
         internal MemoryStream _sendMS = null;
         internal BinaryWriter _sendBW = null;
 
@@ -66,8 +66,8 @@ namespace Vaser
                 }
             }
 
-            
-            
+
+
         }
 
         volatile bool QueueLock = false;
@@ -91,7 +91,7 @@ namespace Vaser
                     }
                     templist = GetPakets();
                 }
-                
+
                 //templist.Clear();
             }
         }
@@ -115,8 +115,8 @@ namespace Vaser
             {
 
                 packetListTEMP = packetList1;
-                packetList1 =  new List<Packet_Recv>();
-                if(packetListTEMP.Count == 0) QueueLock = false;
+                packetList1 = new List<Packet_Recv>();
+                if (packetListTEMP.Count == 0) QueueLock = false;
             }
 
             return packetListTEMP;

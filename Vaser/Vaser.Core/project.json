@@ -1,0 +1,22 @@
+{
+  "title": "Vaser",
+  "copyright": "GNU GPLv3 - MIT - by Philipp Gerull 2016",
+  "description": "Network library",
+  "language": "en",
+  "version": "1.1.8-*",
+
+  "dependencies": {
+    "NETStandard.Library": "1.6.0",
+    "System.Net.Security": "4.0.0",
+    "System.Reflection.TypeExtensions": "4.1.0",
+    "System.Security.Principal": "4.0.1",
+    "System.Threading.Thread": "4.0.0",
+    "System.Threading.ThreadPool": "4.0.10"
+  },
+
+  "frameworks": {
+    "netstandard1.6": {
+      "imports": "dnxcore50"
+    }
+  }
+}

@@ -300,7 +300,7 @@ namespace Vaser
                     ThreadPool.QueueUserWorkItem(NewEventWorker);
                 }
             }
-            
+
 
         }
         volatile bool NewQueueLock = false;
@@ -346,15 +346,15 @@ namespace Vaser
         {
             if (con == null) return;
 
-                lock (_ConnectionList_ThreadLock)
-                {
-                    _ConnectionList.Remove(con);
-                    LinkEventArgs args = new LinkEventArgs();
-                    args.lnk = con.link;
+            lock (_ConnectionList_ThreadLock)
+            {
+                _ConnectionList.Remove(con);
+                LinkEventArgs args = new LinkEventArgs();
+                args.lnk = con.link;
 
-                    OnDisconnectingLink(args);
+                OnDisconnectingLink(args);
             }
-                
+
         }
 
 

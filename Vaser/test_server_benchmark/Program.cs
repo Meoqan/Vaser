@@ -90,7 +90,7 @@ namespace test_server_benchmark
         static void OnNewLinkServer2(object p, LinkEventArgs e)
         {
 
-            Console.WriteLine("CL2 CON " + object_counter);
+            Console.WriteLine("             CL2 CON " + object_counter);
             lock (Livinglist_lock)
             {
                 Livinglist.Add(e.lnk);
@@ -108,7 +108,7 @@ namespace test_server_benchmark
 
         static void OnDisconnectingLinkServer1(object p, LinkEventArgs e)
         {
-            //Console.WriteLine("CL1 DIS");
+            Console.WriteLine("                        CL1 DIS");
             lock (Livinglist_lock)
             {
                 Livinglist.Remove(e.lnk);
@@ -117,7 +117,7 @@ namespace test_server_benchmark
 
         static void OnDisconnectingLinkServer2(object p, LinkEventArgs e)
         {
-            //Console.WriteLine("CL2 DIS");
+            Console.WriteLine("                                  CL2 DIS");
             lock (Livinglist_lock)
             {
                 Livinglist.Remove(e.lnk);
@@ -132,7 +132,7 @@ namespace test_server_benchmark
             if (con2.UnpackContainer(e.pak, e.portal))
             {
                 //Console.WriteLine(con1.test);
-                //Console.WriteLine("Pong!  CounterID" + con2.ID + " Object:" + pak.ObjectID);
+                //Console.WriteLine("Pong!  CounterID" + con2.ID + " Object:" + e.pak.ObjectID);
                 // the last 2 digits are manually set [1]
                 e.portal.SendContainer(e.lnk, con2, 1, e.pak.ObjectID);
             }

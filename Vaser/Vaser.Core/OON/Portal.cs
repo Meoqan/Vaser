@@ -66,8 +66,8 @@ namespace Vaser
                 }
             }
 
-            
-            
+
+
         }
 
         volatile bool QueueLock = false;
@@ -80,7 +80,6 @@ namespace Vaser
                 List<Packet_Recv> templist = GetPakets();
                 while (templist.Count != 0)
                 {
-                    //Debug.WriteLine("EventWorker");
                     foreach (Packet_Recv pak in templist)
                     {
                         PacketEventArgs args = new PacketEventArgs();
@@ -91,7 +90,7 @@ namespace Vaser
                     }
                     templist = GetPakets();
                 }
-                
+                QueueLock = false;
                 //templist.Clear();
             }
         }

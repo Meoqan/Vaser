@@ -270,7 +270,7 @@ namespace Vaser
 
             if (_Connect._IsAccepted == false)
             {
-                
+
                 _Connect.AcceptConnection();
 
                 lock (_Static_ThreadLock)
@@ -279,7 +279,7 @@ namespace Vaser
                 }
             }
         }
-        
+
         protected virtual void OnDisconnectingLink(LinkEventArgs e)
         {
 
@@ -298,7 +298,7 @@ namespace Vaser
         /// </summary>
         public void Dispose()
         {
-            lock(_DisposeLock)
+            lock (_DisposeLock)
             {
                 //SendData();
                 //Debug.WriteLine("Link.Dispose called");
@@ -350,6 +350,6 @@ namespace Vaser
 
             }
         }
-        
+
     }
 }
