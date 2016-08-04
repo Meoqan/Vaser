@@ -813,6 +813,7 @@ namespace Vaser
 
 
 
+
         #region Receive
 
 
@@ -851,6 +852,7 @@ namespace Vaser
                     {
                         bytesRead = _SocketTCPClient.EndReceive(iar);
                         //doubbleDedectionRead = false;
+                        WritePackets();
                     }
                     catch (Exception esf)
                     {
@@ -860,7 +862,7 @@ namespace Vaser
                 }
             }
 
-            WritePackets();
+
 
             lock (_ReceiveDisposelock)
             {
@@ -922,6 +924,7 @@ namespace Vaser
                         //Socket sendingSocket = (Socket)iar.AsyncState;
                         bytesRead = _sslStream.EndRead(iar);
                         //doubbleDedectionRead = false;
+                        WritePackets();
                     }
                     catch (Exception esf)
                     {
@@ -931,7 +934,7 @@ namespace Vaser
                 }
             }
 
-            WritePackets();
+
 
             lock (_ReceiveDisposelock)
             {
@@ -993,6 +996,7 @@ namespace Vaser
                         //Socket sendingSocket = (Socket)iar.AsyncState;
                         bytesRead = _AuthStream.EndRead(iar);
                         //doubbleDedectionRead = false;
+                        WritePackets();
                     }
                     catch (Exception esf)
                     {
@@ -1002,7 +1006,7 @@ namespace Vaser
                 }
             }
 
-            WritePackets();
+
 
 
             lock (_ReceiveDisposelock)
@@ -1309,6 +1313,6 @@ namespace Vaser
                 return false;
             }
         }
-    }
 
+    }
 }

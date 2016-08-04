@@ -3,7 +3,7 @@
   "copyright": "GNU GPLv3 - MIT - by Philipp Gerull 2016",
   "description": "Network library",
   "language": "en",
-  "version": "1.1.8-*",
+  "version": "1.1.9-*",
 
   "dependencies": {
     "NETStandard.Library": "1.6.0",
