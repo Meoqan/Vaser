@@ -1,5 +1,6 @@
 #Welcome to Vaser!
-Vaser is a powerful high performance event based network engine library for C# .Net. It’s possible to start multiple servers in one program and use the same network code for all servers. 
+Vaser is a powerful high performance event based network engine library for C# .Net. It’s possible to start multiple servers in one program and use the same network code for all servers.
+In the network communication are all strings are omitted, instead it is based on a unique binary identifier, which the CPU and memory relieves massively.
 
 If you need any help or have suggestions, please send me a message.
 
