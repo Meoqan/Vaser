@@ -12,4 +12,4 @@ Features:
 + structured data communication with data portals
 + simple data container building
 + ability to send 1D arrays
-+ data packets have ObjectID’s and ContainerID’s marks for simplified _object-oriented networking_
++ data packets have ObjectID’s and ContainerID’s identifier for simplified _object-oriented networking_
