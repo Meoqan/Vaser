@@ -80,7 +80,7 @@ namespace test_client
 
             VaserSSLClient ssl = new VaserSSLClient("localhost");
             VaserKerberosClient kerberos = new VaserKerberosClient();
-            Link lnk1 = VaserClient.ConnectClient("localhost", 3100, PC, ssl);
+            Link lnk1 = VaserClient.ConnectClient("localhost", 3100, PC);
             lnk1.EmptyBuffer += OnEmptyBuffer;
 
             if (lnk1 != null) Console.WriteLine("1: successfully established connection.");

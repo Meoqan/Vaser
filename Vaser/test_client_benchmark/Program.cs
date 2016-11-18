@@ -45,28 +45,34 @@ namespace test_client_benchmark
             int counter = 0;
             while (true)
             {
-                while (Livinglist.Count < 100)
+                while (Livinglist.Count < 1)
                 {
-                    counter++;
-                    Link lnk1 = VaserClient.ConnectClient("localhost", 3100, PC);
-                    lnk1.Disconnecting += OnDisconnectingLink;
-                    counter++;
-                    Link lnk2 = VaserClient.ConnectClient("localhost", 3101, PC);
-                    lnk2.Disconnecting += OnDisconnectingLink;
-
-                    if (lnk1 != null)
+                    lock (Livinglist_lock)
                     {
-                        //Console.WriteLine("1: successfully established connection.");
-                        lock (Livinglist_lock)
+                        counter++;
+                        Link lnk1 = VaserClient.ConnectClient("localhost", 3100, PC);
+                        lnk1.Disconnecting += OnDisconnectingLink;
+                        lnk1.AttachedID = (uint)counter;
+
+
+                        if (lnk1 != null)
                         {
+                            //Console.WriteLine("1: successfully established connection.");
+
                             Livinglist.Add(lnk1);
                         }
                     }
-                    if (lnk2 != null)
+                    lock (Livinglist_lock)
                     {
-                        //Console.WriteLine("2: successfully established connection.");
-                        lock (Livinglist_lock)
+                        counter++;
+                        Link lnk2 = VaserClient.ConnectClient("localhost", 3101, PC);
+                        lnk2.Disconnecting += OnDisconnectingLink;
+                        lnk2.AttachedID = (uint)counter;
+
+                        if (lnk2 != null)
                         {
+                            //Console.WriteLine("2: successfully established connection.");
+
                             Livinglist.Add(lnk2);
                         }
                     }
@@ -80,10 +86,11 @@ namespace test_client_benchmark
 
         static void OnDisconnectingLink(object p, LinkEventArgs e)
         {
-            //Console.WriteLine("CL OnDisconnectingLink");
+            //Console.Write("CL OnDisconnectingLink: " + e.lnk.AttachedID);
             lock (Livinglist_lock)
             {
                 Livinglist.Remove(e.lnk);
+                //Console.WriteLine("   Okay  "+ Livinglist.Count);
             }
         }
 
@@ -103,7 +110,7 @@ namespace test_client_benchmark
                     {
                         if (con2.ID < 0) Console.WriteLine("Decode error: " + con2.ID);
                         //if (con2.ID > 100) Console.WriteLine("Decode error: " + con2.ID);
-                        if (con2.ID < 50)
+                        if (con2.ID < 500)
                         {
                             //Console.WriteLine("Ping! " + counter + " CounterID" + con2.ID + " Object:" + e.pak.ObjectID);
 

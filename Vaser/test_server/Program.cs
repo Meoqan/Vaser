@@ -60,7 +60,7 @@ namespace test_server
 
 
 
-            Console.WriteLine("Import Test Cert");
+            /*Console.WriteLine("Import Test Cert");
             //Import Test Cert
             X509Certificate2 cert = new X509Certificate2();
 
@@ -88,12 +88,12 @@ namespace test_server
             string resultsFalse = cert.ToString(false);
             // Display the value to the console.
             Console.WriteLine(resultsFalse);
-
+            */
             //start the server
             Console.WriteLine("Creating server: IPAddress any, Port 3100, VaserMode ModeSSL");
-            VaserSSLServer ssl = new VaserSSLServer(certificates[0]);
+            //VaserSSLServer ssl = new VaserSSLServer(certificates[0]);
             VaserKerberosServer kerberos = new VaserKerberosServer();
-            VaserServer Server1 = new VaserServer(System.Net.IPAddress.Any, 3100, PC, ssl);
+            VaserServer Server1 = new VaserServer(System.Net.IPAddress.Any, 3100, PC);
             Server1.NewLink += OnNewLink;
 
             Server1.Start();

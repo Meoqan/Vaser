@@ -3,15 +3,15 @@
   "copyright": "GNU GPLv3 - MIT - by Philipp Gerull 2016",
   "description": "Network library",
   "language": "en",
-  "version": "1.1.9-*",
+  "version": "1.1.11-*",
 
   "dependencies": {
-    "NETStandard.Library": "1.6.0",
-    "System.Net.Security": "4.0.0",
-    "System.Reflection.TypeExtensions": "4.1.0",
-    "System.Security.Principal": "4.0.1",
-    "System.Threading.Thread": "4.0.0",
-    "System.Threading.ThreadPool": "4.0.10"
+    "NETStandard.Library": "1.6.1-preview1-24530-04",
+    "System.Net.Security": "4.3.0-preview1-24530-04",
+    "System.Reflection.TypeExtensions": "4.3.0-preview1-24530-04",
+    "System.Security.Principal": "4.3.0-preview1-24530-04",
+    "System.Threading.Thread": "4.3.0-preview1-24530-04",
+    "System.Threading.ThreadPool": "4.3.0-preview1-24530-04"
   },
 
   "frameworks": {

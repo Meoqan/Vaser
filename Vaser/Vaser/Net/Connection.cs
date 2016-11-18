@@ -66,8 +66,9 @@ namespace Vaser
         private VaserSSLClient _vSSLC = null;
         private VaserKerberosClient _vKerberosC = null;
 
-        private volatile bool IsInQueue = false;
-        private volatile bool IsInSendQueue = false;
+        private object _IsInQueue_Lock = new object();
+        private bool IsInQueue = false;
+        private bool IsInSendQueue = false;
 
         private System.Timers.Timer _aTimer;
 
@@ -171,8 +172,8 @@ namespace Vaser
             _vSSLC = SSLC;
             _vKerberosC = KerberosC;
 
-            client.SendBufferSize = 65007;
             _SocketTCPClient = client;
+            _SocketTCPClient.LingerState = new LingerOption(true, 0);
 
             server = srv;
 
@@ -201,7 +202,7 @@ namespace Vaser
 
         }
 
-        
+
         private void _BootUpTimer_Elapsed(object sender, ElapsedEventArgs e)
         {
             _BootUpTimes++;
@@ -219,8 +220,6 @@ namespace Vaser
                     {
                         try
                         {
-                            _SocketTCPClient.Close();
-
                             // encryption
                             if (_Mode == VaserOptions.ModeKerberos && _AuthStream != null)
                             {
@@ -232,6 +231,7 @@ namespace Vaser
                                 _sslStream.Close();
                             }
 
+                            _SocketTCPClient.Close();
                         }
                         catch
                         {
@@ -415,7 +415,7 @@ namespace Vaser
                     if (_Mode == VaserOptions.ModeKerberos) ThreadPool.QueueUserWorkItem(ReceiveKerberos);
                     if (_Mode == VaserOptions.ModeSSL) ThreadPool.QueueUserWorkItem(ReceiveSSL);
                 }
-                
+
                 _aTimer.Enabled = true;
                 _aTimer.Start();
 
@@ -455,28 +455,31 @@ namespace Vaser
             }
         }
 
-        
+
         private void OnTimedEvent(object source, ElapsedEventArgs e)
         {
             //Debug.WriteLine("Send keep alive packet {0}", e.SignalTime);
-            lock (_link.SendData_Lock)
+            /*lock (_link.SendData_Lock)
             {
                 if (_link.SendDataPortalArrayOUTPUT[0] != null) _link.SendDataPortalArrayOUTPUT[0].Enqueue(_timeoutpacket);
             }
-            QueueSend();
+            QueueSend();*/
         }
 
 
         internal void QueueStreamDecrypt()
         {
-            if (IsInQueue == false)
+            lock (_IsInQueue_Lock)
             {
-                IsInQueue = true;
-                ThreadPool.QueueUserWorkItem(ThreadPoolCallback);
+                if (IsInQueue == false)
+                {
+                    IsInQueue = true;
+                    ThreadPool.QueueUserWorkItem(ThreadPoolCallback);
+                }
             }
         }
 
-        
+
         internal void QueueSendNotEncrypted()
         {
             lock (_link.SendData_Lock)
@@ -591,7 +594,17 @@ namespace Vaser
                         //_ReadStream_Lock.Wait();
                         lock (_ReadStream_Lock)
                         {
-                            if (_rms1.Length > 0) action1 = true;
+                            lock (_IsInQueue_Lock)
+                            {
+                                if (_rms1.Length > 0)
+                                {
+                                    action1 = true;
+                                }
+                                else
+                                {
+                                    IsInQueue = false;
+                                }
+                            }
                             //Debug.WriteLine("Decrypting: _rms1.Length = " + _rms1.Length);
                             _rbw2.Write(_rms1.ToArray());
 
@@ -695,7 +708,7 @@ namespace Vaser
                 //Dispose();
                 ThreadIsRunning = false;
             }
-            IsInQueue = false;
+            
         }
 
 
@@ -718,7 +731,7 @@ namespace Vaser
 
         internal void Dispose()
         {
-            
+
             lock (_DisposeLock)
             {
                 if (Disposed)
@@ -762,7 +775,7 @@ namespace Vaser
                     if (_sslStream != null) _sslStream.Close();
                     _SocketTCPClient.Close();
 
-                   
+
                     mySendNotEncryptedCallback = null;
                     myReceiveNotEncryptedCallback = null;
                     mySendKerberosCallback = null;
@@ -791,7 +804,7 @@ namespace Vaser
                         _rbr1 = null;
                         _rbr2 = null;
                     }
-                    catch (Exception e)
+                    catch
                     {
                         //Debug.WriteLine("Connection.Dispose()  > " + e.ToString());
                     }
@@ -804,7 +817,7 @@ namespace Vaser
                         _rbw1 = null;
                         _rbw2 = null;
                     }
-                    catch (Exception e)
+                    catch
                     {
                         //Debug.WriteLine("Connection.Dispose()  > " + e.ToString());
                     }
@@ -819,7 +832,7 @@ namespace Vaser
 
                         _buff = null;
                     }
-                    catch (Exception e)
+                    catch
                     {
                         //Debug.WriteLine("Connection.Dispose()  > " + e.ToString());
                     }
@@ -827,7 +840,7 @@ namespace Vaser
             }
             #endregion
 
-            
+
 
             if (link != null)
             {
@@ -849,13 +862,11 @@ namespace Vaser
             {
                 if (StreamIsConnected)
                 {
-                    //if (doubbleDedectionRead) Console.WriteLine("?????????????????????????????????????????????????????????????????????");
-                    //doubbleDedectionRead = true;
                     try
                     {
                         _SocketTCPClient.BeginReceive(_buff, 0, _buff.Length, 0, myReceiveNotEncryptedCallback, _SocketTCPClient);
                     }
-                    catch (Exception esf)
+                    catch
                     {
                         StreamIsConnected = false;
                         _DoDispose = true;
@@ -877,10 +888,14 @@ namespace Vaser
                     try
                     {
                         bytesRead = _SocketTCPClient.EndReceive(iar);
-                        //doubbleDedectionRead = false;
+                        if (bytesRead < 1)
+                        {
+                            Dispose();
+                            return;
+                        }
                         WritePackets();
                     }
-                    catch (Exception esf)
+                    catch
                     {
                         StreamIsConnected = false;
                         _DoDispose = true;
@@ -888,23 +903,24 @@ namespace Vaser
                 }
             }
 
-            
+
 
             lock (_ReceiveDisposelock)
             {
                 if (StreamIsConnected)
                 {
-                    //if (doubbleDedectionRead) Console.WriteLine("?????????????????????????????????????????????????????????????????????");
+                    //Console.WriteLine("YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY");
                     //doubbleDedectionRead = true;
                     try
                     {
                         _SocketTCPClient.BeginReceive(_buff, 0, _buff.Length, 0, myReceiveNotEncryptedCallback, _SocketTCPClient);
                     }
-                    catch (Exception esf)
+                    catch
                     {
                         StreamIsConnected = false;
                         _DoDispose = true;
                     }
+                    //Console.WriteLine("OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO");
                 }
             }
 
@@ -926,7 +942,7 @@ namespace Vaser
                     {
                         _sslStream.BeginRead(_buff, 0, _buff.Length, myReceiveSSLCallback, _sslStream);
                     }
-                    catch (Exception esf)
+                    catch
                     {
                         StreamIsConnected = false;
                         _DoDispose = true;
@@ -949,10 +965,14 @@ namespace Vaser
                     {
                         //Socket sendingSocket = (Socket)iar.AsyncState;
                         bytesRead = _sslStream.EndRead(iar);
-                        //doubbleDedectionRead = false;
+                        if (bytesRead < 1)
+                        {
+                            Dispose();
+                            return;
+                        }
                         WritePackets();
                     }
-                    catch (Exception esf)
+                    catch
                     {
                         StreamIsConnected = false;
                         _DoDispose = true;
@@ -960,7 +980,7 @@ namespace Vaser
                 }
             }
 
-            
+
 
             lock (_ReceiveDisposelock)
             {
@@ -972,7 +992,7 @@ namespace Vaser
                     {
                         _sslStream.BeginRead(_buff, 0, _buff.Length, myReceiveSSLCallback, _sslStream);
                     }
-                    catch (Exception esf)
+                    catch
                     {
                         StreamIsConnected = false;
                         _DoDispose = true;
@@ -998,7 +1018,7 @@ namespace Vaser
                     {
                         _AuthStream.BeginRead(_buff, 0, _buff.Length, myReceiveKerberosCallback, _AuthStream);
                     }
-                    catch (Exception esf)
+                    catch
                     {
                         StreamIsConnected = false;
                         _DoDispose = true;
@@ -1021,10 +1041,14 @@ namespace Vaser
                     {
                         //Socket sendingSocket = (Socket)iar.AsyncState;
                         bytesRead = _AuthStream.EndRead(iar);
-                        //doubbleDedectionRead = false;
+                        if (bytesRead < 1)
+                        {
+                            Dispose();
+                            return;
+                        }
                         WritePackets();
                     }
-                    catch (Exception esf)
+                    catch
                     {
                         StreamIsConnected = false;
                         _DoDispose = true;
@@ -1032,7 +1056,7 @@ namespace Vaser
                 }
             }
 
-            
+
 
 
             lock (_ReceiveDisposelock)
@@ -1045,7 +1069,7 @@ namespace Vaser
                     {
                         _AuthStream.BeginRead(_buff, 0, _buff.Length, myReceiveKerberosCallback, _AuthStream);
                     }
-                    catch (Exception esf)
+                    catch
                     {
                         StreamIsConnected = false;
                         _DoDispose = true;
@@ -1109,7 +1133,7 @@ namespace Vaser
                     {
                         _SocketTCPClient.BeginSend(byteData._SendData, 0, byteData._SendData.Length, 0, mySendNotEncryptedCallback, _SocketTCPClient);
                     }
-                    catch (Exception esf)
+                    catch
                     {
                         StreamIsConnected = false;
                         _DoDispose = true;
@@ -1133,7 +1157,7 @@ namespace Vaser
                         _SocketTCPClient.EndSend(iar);
                         //doubbleDedection = false;
                     }
-                    catch (Exception esf)
+                    catch
                     {
                         StreamIsConnected = false;
                         _DoDispose = true;
@@ -1174,7 +1198,7 @@ namespace Vaser
                     {
                         _AuthStream.BeginWrite(byteData._SendData, 0, byteData._SendData.Length, mySendKerberosCallback, _AuthStream);
                     }
-                    catch (Exception esf)
+                    catch
                     {
                         StreamIsConnected = false;
                         _DoDispose = true;
@@ -1198,7 +1222,7 @@ namespace Vaser
                         _AuthStream.EndWrite(iar);
                         //doubbleDedection = false;
                     }
-                    catch (Exception esf)
+                    catch
                     {
                         StreamIsConnected = false;
                         _DoDispose = true;
@@ -1226,7 +1250,7 @@ namespace Vaser
                 return;
             }
 
-            if(GetPackets()) return;
+            if (GetPackets()) return;
 
             lock (_SendDisposelock)
             {
@@ -1238,7 +1262,7 @@ namespace Vaser
                     {
                         _sslStream.BeginWrite(byteData._SendData, 0, byteData._SendData.Length, mySendSSLCallback, _sslStream);
                     }
-                    catch (Exception esf)
+                    catch
                     {
                         StreamIsConnected = false;
                         _DoDispose = true;
@@ -1262,7 +1286,7 @@ namespace Vaser
                         _sslStream.EndWrite(iar);
                         //doubbleDedection = false;
                     }
-                    catch (Exception esf)
+                    catch
                     {
                         StreamIsConnected = false;
                         _DoDispose = true;
@@ -1301,10 +1325,7 @@ namespace Vaser
                         //Debug.WriteLine("Sending.... Lenght: " + byteData._SendData.Length);
                         break;
                     }
-                    else
-                    {
-
-                    }
+                    
                 }
 
 

@@ -298,7 +298,8 @@ namespace Vaser
         /// </summary>
         public void Dispose()
         {
-            lock(_DisposeLock)
+            //Debug.WriteLine("Link.Dispose called");
+            lock (_DisposeLock)
             {
                 //SendData();
                 //Debug.WriteLine("Link.Dispose called");
@@ -349,6 +350,7 @@ namespace Vaser
                 }
 
             }
+            //Debug.WriteLine("Link.Dispose ended");
         }
         
     }

@@ -20,7 +20,7 @@ namespace Vaser
         private NetworkStream _ConnectionStream;
         private NegotiateStream _AuthStream;
         private SslStream _sslStream;
-        private NetworkStream _NotEncryptedStream;
+        //private NetworkStream _NotEncryptedStream;
 
         private Socket _SocketTCPClient;
         public volatile bool Disposed;
@@ -61,8 +61,9 @@ namespace Vaser
         private VaserSSLClient _vSSLC = null;
         private VaserKerberosClient _vKerberosC = null;
 
-        private volatile bool IsInQueue = false;
-        private volatile bool IsInSendQueue = false;
+        private object _IsInQueue_Lock = new object();
+        private bool IsInQueue = false;
+        private bool IsInSendQueue = false;
 
         private Timer _aTimer;
 
@@ -194,7 +195,7 @@ namespace Vaser
                         {
                             _SocketTCPClient.Dispose();
 
-                            _ConnectionStream.Dispose();
+                            if(_ConnectionStream != null) _ConnectionStream.Dispose();
 
                             // encryption
                             if (_Mode == VaserOptions.ModeKerberos && _AuthStream != null)
@@ -231,19 +232,20 @@ namespace Vaser
 
             try
             {
-                
-                _ConnectionStream = new NetworkStream(_SocketTCPClient);
 
+                _SocketTCPClient.LingerState = new LingerOption(true, 10);
 
                 // encryption
                 if (_Mode == VaserOptions.ModeKerberos)
                 {
+                    _ConnectionStream = new NetworkStream(_SocketTCPClient);
                     QueueSend = QueueSendKerberos;
                     _AuthStream = new NegotiateStream(_ConnectionStream, leaveInnerStreamOpen);
                 }
 
                 if (_Mode == VaserOptions.ModeSSL)
                 {
+                    _ConnectionStream = new NetworkStream(_SocketTCPClient);
                     QueueSend = QueueSendSSL;
                     _sslStream = new SslStream(_ConnectionStream, leaveInnerStreamOpen);
                 }
@@ -251,7 +253,7 @@ namespace Vaser
                 if (_Mode == VaserOptions.ModeNotEncrypted)
                 {
                     QueueSend = QueueSendNotEncrypted;
-                    _NotEncryptedStream = _ConnectionStream;
+                    //_NotEncryptedStream = _ConnectionStream;
                 }
 
                 if (IsServer)
@@ -441,10 +443,13 @@ namespace Vaser
 
         internal void QueueStreamDecrypt()
         {
-            if (IsInQueue == false)
+            lock (_IsInQueue_Lock)
             {
-                IsInQueue = true;
-                ThreadPool.QueueUserWorkItem(ThreadPoolCallback);
+                if (IsInQueue == false)
+                {
+                    IsInQueue = true;
+                    ThreadPool.QueueUserWorkItem(ThreadPoolCallback);
+                }
             }
         }
 
@@ -562,7 +567,17 @@ namespace Vaser
                         //_ReadStream_Lock.Wait();
                         lock (_ReadStream_Lock)
                         {
-                            if (_rms1.Length > 0) action1 = true;
+                            lock (_IsInQueue_Lock)
+                            {
+                                if (_rms1.Length > 0)
+                                {
+                                    action1 = true;
+                                }
+                                else
+                                {
+                                    IsInQueue = false;
+                                }
+                            }
                             //Debug.WriteLine("Decrypting: _rms1.Length = " + _rms1.Length);
                             _rbw2.Write(_rms1.ToArray());
 
@@ -666,7 +681,6 @@ namespace Vaser
                 //Dispose();
                 ThreadIsRunning = false;
             }
-            IsInQueue = false;
         }
 
 
@@ -712,7 +726,7 @@ namespace Vaser
 
                     if (_AuthStream != null) _AuthStream.Dispose();
                     if (_sslStream != null) _sslStream.Dispose();
-                    _ConnectionStream.Dispose();
+                    if (_ConnectionStream != null) _ConnectionStream.Dispose();
                 }
             }
 
@@ -782,14 +796,20 @@ namespace Vaser
         }
 
 
-
+        private ArraySegment<byte> _SAbuff = new ArraySegment<byte>(new byte[65007]);
         internal async void ReceiveNotEncrypted(object state)
         {
             try
             {
                 while (true)
                 {
-                    bytesRead = await _NotEncryptedStream.ReadAsync(_buff, 0, _buff.Length);
+                    bytesRead = await _SocketTCPClient.ReceiveAsync(_SAbuff, SocketFlags.None);
+                    if (bytesRead < 1)
+                    {
+                        Dispose();
+                        return;
+                    }
+                    _buff = _SAbuff.Array;
                     WritePackets();
                 }
             }
@@ -810,6 +830,11 @@ namespace Vaser
                 while (true)
                 {
                     bytesRead = await _sslStream.ReadAsync(_buff, 0, _buff.Length);
+                    if (bytesRead < 1)
+                    {
+                        Dispose();
+                        return;
+                    }
                     WritePackets();
                 }
             }
@@ -832,6 +857,11 @@ namespace Vaser
                 {
                     
                     bytesRead = await _AuthStream.ReadAsync(_buff, 0, _buff.Length);
+                    if (bytesRead < 1)
+                    {
+                        Dispose();
+                        return;
+                    }
                     WritePackets();
                 }
             }
@@ -880,9 +910,10 @@ namespace Vaser
 
                     if (!StreamIsConnected) return;
 
-                    if (_NotEncryptedStream != null && _NotEncryptedStream.CanWrite && _SocketTCPClient.Connected)
+                    if (_SocketTCPClient.Connected)
                     {
-                        await _NotEncryptedStream.WriteAsync(byteData._SendData, 0, byteData._SendData.Length);
+                        ArraySegment<byte> SA = new ArraySegment<byte>(byteData._SendData);
+                        await _SocketTCPClient.SendAsync(SA,SocketFlags.None);
                     }
 
 
@@ -975,10 +1006,6 @@ namespace Vaser
 
                         //Debug.WriteLine("Sending.... Lenght: " + byteData._SendData.Length);
                         break;
-                    }
-                    else
-                    {
-
                     }
                 }
 
