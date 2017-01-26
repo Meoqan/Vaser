@@ -1,9 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Diagnostics;
+using Vaser.OON;
 
 namespace Vaser
 {
@@ -37,7 +34,7 @@ namespace Vaser
         /// <returns></returns>
         public void RegisterPortal(Portal portal)
         {
-            if(Active) throw new Exception("this PortalCollection is in use! please register portals before using");
+            if (Active) throw new Exception("this PortalCollection is in use! please register portals before using");
 
             lock (_ListLock)
             {
@@ -45,7 +42,35 @@ namespace Vaser
                 PortalArray[portal._PID] = portal;
             }
         }
-        
+
+        /// <summary>
+        /// Register an request class for packetprocessing
+        /// </summary>
+        /// <param name="RequestHandler"></param>
+        /// <param name="portal"></param>
+        /// <param name="ContainerID"></param>
+        public void RegisterRequest(cRequest RequestHandler, Portal portal, ushort ContainerID)
+        {
+            if (Active) throw new Exception("this PortalCollection is in use! please register portals before using");
+            RequestHandler._Portal = portal;
+            RequestHandler.ContainerID = ContainerID;
+            portal.RegisterRequest(ContainerID, RequestHandler);
+        }
+
+        /// <summary>
+        /// Register an channel class for packetprocessing
+        /// </summary>
+        /// <param name="ChannelHandler"></param>
+        /// <param name="portal"></param>
+        /// <param name="ContainerID"></param>
+        public void RegisterChannel(cChannel ChannelHandler, Portal portal, ushort ContainerID)
+        {
+            if (Active) throw new Exception("this PortalCollection is in use! please register portals before using");
+            ChannelHandler._Portal = portal;
+            ChannelHandler.ContainerID = ContainerID;
+            portal.RegisterChannel(ContainerID, ChannelHandler);
+        }
+
         internal object _GivePacketToClass_lock = new object();
 
         internal void GivePacketToClass(Packet_Recv pak)
@@ -62,6 +87,13 @@ namespace Vaser
                     Debug.WriteLine("Vaser.Portal> Portal not found.");
                     pak.link.Dispose();
                 }
+            }
+        }
+        internal void RemoveDisconectingLinkFromRequest(Link _lnk)
+        {
+            foreach (Portal p in PortalArray)
+            {
+                if (p != null) p.RemoveDisconectingLinkFromRequests(_lnk);
             }
         }
     }

@@ -8,6 +8,7 @@ using System.Security.Authentication;
 using System.Diagnostics;
 using System.Threading;
 using System.Security.Principal;
+using Vaser.ConnectionSettings;
 
 namespace Vaser
 {
@@ -29,7 +30,7 @@ namespace Vaser
         internal delegate void QueueSendHidden();
         internal QueueSendHidden QueueSend = null;
 
-        private PortalCollection _PCollection = null;
+        internal PortalCollection _PCollection = null;
 
         private int bytesRead;
 
@@ -64,9 +65,7 @@ namespace Vaser
         private object _IsInQueue_Lock = new object();
         private bool IsInQueue = false;
         private bool IsInSendQueue = false;
-
-        private Timer _aTimer;
-
+        
         private Timer _BootUpTimer = null;
         private int _BootUpTimes = 0;
 
@@ -319,6 +318,8 @@ namespace Vaser
                         link.IsServer = true;
                     }
 
+                    link.vServer = server;
+
                     BootupDone = true;
                     server.AddNewLink(link);
 
@@ -393,9 +394,7 @@ namespace Vaser
                     if (_Mode == VaserOptions.ModeKerberos) ThreadPool.QueueUserWorkItem(ReceiveKerberos);
                     if (_Mode == VaserOptions.ModeSSL) ThreadPool.QueueUserWorkItem(ReceiveSSL);
                 }
-
-                _aTimer = new Timer(new TimerCallback(OnTimedEvent), null, 0, 5000);
-
+                
             }
             catch (AuthenticationException e)
             {
@@ -430,16 +429,6 @@ namespace Vaser
         }
 
         
-        private void OnTimedEvent(object source)
-        {
-            //Debug.WriteLine("Send keep alive packet {0}", e.SignalTime);
-            lock (_link.SendData_Lock)
-            {
-                if (_link.SendDataPortalArrayOUTPUT[0] != null) _link.SendDataPortalArrayOUTPUT[0].Enqueue(_timeoutpacket);
-            }
-            QueueSend();
-        }
-
 
         internal void QueueStreamDecrypt()
         {
@@ -703,10 +692,7 @@ namespace Vaser
             }
 
             if (server != null) server.RemoveFromConnectionList(this);
-
-            _aTimer.Dispose();
-            _aTimer = null;
-
+            
             lock (_ReceiveDisposelock)
             {
                 lock (_SendDisposelock)

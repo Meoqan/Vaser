@@ -6,21 +6,26 @@ using System.Threading.Tasks;
 using System.Security.Cryptography.X509Certificates;
 using Vaser;
 using System.Threading;
+using Vaser.OON;
+using Vaser.ConnectionSettings;
 
 namespace test_client
 {
+    public class TestContainer : Container
+    {
+        //only public, nonstatic and standard datatypes can be transmitted
+        public int ID = 1;
+        public string test = "test text!";
+        public byte[] by = new byte[10000];
+    }
+
     class Program
     {
         // Build your data container
-        public class TestContainer : Container
-        {
-            //only public, nonstatic and standard datatypes can be transmitted
-            public int ID = 1;
-            public string test = "test text!";
-            public byte[] by = new byte[10000];
-        }
+        
         // create new container
-        static TestContainer con1 = new TestContainer();
+       
+        static TestContainer con2 = new TestContainer();
         static void Main(string[] args)
         {
 
@@ -32,9 +37,13 @@ namespace test_client
             Portal system = new Portal(100);
             PortalCollection PC = new PortalCollection();
             PC.RegisterPortal(system);
-
             system.IncomingPacket += OnSystemPacket;
 
+            TestRequest myRequest = new TestRequest();
+            PC.RegisterRequest(myRequest, system, 501);
+
+            TestChannel myChannel = new TestChannel();
+            PC.RegisterChannel(myChannel, system, 502);
 
 
             // ###########################################################
@@ -87,13 +96,32 @@ namespace test_client
             
             //working
             if (lnk1.IsConnected) Console.WriteLine("Test. Con OK");
+
+            cStatus sts = myRequest.myRequestStarter("HELLO WORLD!", lnk1);
+
+            myChannel.mySendStarter("This is my channel tester", lnk1);
+
             while (online)
             {
-                
+                if(sts != null)
+                {
+                    if (sts.Done && !sts.Error)
+                    {
+                        Console.WriteLine("Request Done Result: " + (string)sts.ResultObject);
+                        sts = null;
+                        online = false;
+                    }
+                    if (sts != null && sts.Error)
+                    {
+                        Console.WriteLine("Error: " + sts.Message);
+                        sts = null;
+                        online = false;
+                    }
+                }
                 Thread.Sleep(100);
 
                 //entfernen
-                if (lnk1.IsConnected == false) online = false;
+                //if (lnk1.IsConnected == false) online = false;
             }
             //Client1.CloseClient();
             lnk1.Dispose();
@@ -107,6 +135,7 @@ namespace test_client
             //Console.WriteLine("OnEmptyBuffer called!");
         }
 
+        static TestContainer con1 = new TestContainer();
         static void OnSystemPacket(object p, PacketEventArgs e)
         {
             //unpack the packet, true if the decode was successful

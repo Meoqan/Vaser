@@ -1,12 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Threading;
-using System.IO;
 using System.Net;
-using System.Diagnostics;
 
 namespace Vaser
 {
@@ -43,6 +37,7 @@ namespace Vaser
         //internal BinaryWriter bw = null;
 
         private object _AttachedObject = null;
+        private object _vCDObject = null;
         private uint _AttachedID = 0;
 
         //Kerberos
@@ -85,6 +80,31 @@ namespace Vaser
             }
         }
 
+        public VaserServer vServer
+        {
+            get;
+            set;
+        }
+
+        /// <summary>
+        /// Do not use. Used by vContentDelivery
+        /// </summary>
+        public object vCDObject
+        {
+            get
+            {
+
+                return _vCDObject;
+
+            }
+            set
+            {
+
+                _vCDObject = value;
+
+            }
+        }
+
         /// <summary>
         /// Any to this link related ID can be safed here. This variable is threadsafe and is free to use.
         /// </summary>
@@ -109,7 +129,7 @@ namespace Vaser
             {
                 return _UserName;
             }
-            set
+            internal set
             {
                 _UserName = value;
             }
@@ -121,7 +141,7 @@ namespace Vaser
             {
                 return _IsKerberos;
             }
-            set
+            internal set
             {
                 _IsKerberos = value;
             }
@@ -133,7 +153,7 @@ namespace Vaser
             {
                 return _IsAuthenticated;
             }
-            set
+            internal set
             {
                 _IsAuthenticated = value;
             }
@@ -145,7 +165,7 @@ namespace Vaser
             {
                 return _IsEncrypted;
             }
-            set
+            internal set
             {
                 _IsEncrypted = value;
             }
@@ -157,7 +177,7 @@ namespace Vaser
             {
                 return _IsMutuallyAuthenticated;
             }
-            set
+            internal set
             {
                 _IsMutuallyAuthenticated = value;
             }
@@ -169,7 +189,7 @@ namespace Vaser
             {
                 return _IsSigned;
             }
-            set
+            internal set
             {
                 _IsSigned = value;
             }
@@ -181,7 +201,7 @@ namespace Vaser
             {
                 return _IsServer;
             }
-            set
+            internal set
             {
                 _IsServer = value;
             }
@@ -196,7 +216,7 @@ namespace Vaser
             {
                 return _LinkList;
             }
-            set
+            internal set
             {
                 _LinkList = value;
             }
@@ -339,6 +359,7 @@ namespace Vaser
 
                 Connect.Dispose();
                 //Connect = null;
+                Connect._PCollection.RemoveDisconectingLinkFromRequest(this);
 
                 if (!Teardown)
                 {

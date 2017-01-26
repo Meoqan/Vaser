@@ -7,9 +7,9 @@
   "dependencies": {
     "Microsoft.NETCore.App": {
       "type": "platform",
-      "version": "1.0.0"
+      "version": "1.0.1"
     },
-    "System.Runtime.Extensions": "4.1.0",
+    "System.Runtime.Extensions": "4.3.0",
     "Vaser.Core": "1.0.0-*"
   },
 

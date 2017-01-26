@@ -1,8 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.IO;
 using System.Reflection;
 using System.Security;
@@ -17,7 +14,7 @@ namespace Vaser
     public class Container
     {
         private Packet_Send _SendPacket = null;
-        private List<racefield> _FieldList = new List<racefield>();
+        private racefield[] _FieldList = null;
 
         private MemoryStream _ms = null;
         private BinaryWriter _bw = null;
@@ -63,7 +60,7 @@ namespace Vaser
         {
             _bw = null;
             _ms = null;
-            _FieldList.Clear();
+            _FieldList = null;
 
         }
 
@@ -75,14 +72,24 @@ namespace Vaser
 
                 Type myType = obj.GetType();
 
-                MemberInfo[] myMemberInfo = myType.GetMembers();
-
-                foreach (MemberInfo member in myType.GetMembers())
+                FieldInfo[] myFieldInfo = myType.GetFields();
+                int counter = 0;
+                foreach (FieldInfo member in myFieldInfo)
                 {
-                    if (member.MemberType == MemberTypes.Field)
+                    if (member.IsPublic && !member.IsStatic && !member.IsInitOnly)
+                    {
+                        counter++;
+                    }
+                }
+                _FieldList = new racefield[counter];
+                counter = 0;
+                foreach (FieldInfo member in myFieldInfo)
+                {
+                    if (member.IsPublic && !member.IsStatic && !member.IsInitOnly)
                     {
                         racefield rf = BuildRaceField(myType.GetField(member.Name));
-                        if(rf != null) _FieldList.Add(rf);
+                        if (rf != null) _FieldList[counter] = rf;
+                        counter++;
                     }
                 }
 
@@ -125,8 +132,11 @@ namespace Vaser
             {
                 if (pak.Data == null) return false;
 
+                
+
                 _DecodeMS.SetLength(0);
-                _DecodeMSWriter.Write(pak.Data);
+                //_DecodeMSWriter.Write(pak.Data);
+                _DecodeMS.Write(pak.Data, 0, pak.Data.Length);
                 _DecodeMS.Position = 0;
 
                 _ReadCounter = 0;

@@ -1,16 +1,19 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using System.Threading;
-using System.Reflection;
-using System.Security;
 using System.IO;
 using System.Diagnostics;
 
 namespace Vaser
 {
+    public class PacketEventArgs : EventArgs
+    {
+        public Link lnk { get; set; }
+        public Packet_Recv pak { get; set; }
+        public Portal portal { get; set; }
+    }
+
     /// <summary>
     /// This class is a data gateway for sending and receiving packets.
     /// It helps to manage the datastream by separating the packets by its thematic.
@@ -20,6 +23,8 @@ namespace Vaser
         internal byte _PID = 0;
 
         //internal PortalCollection _PCollection;
+        internal Dictionary<ushort, OON.cRequest> RequestDictionary = new Dictionary<ushort, OON.cRequest>();
+        internal Dictionary<ushort, OON.cChannel> ChannelDictionary = new Dictionary<ushort, OON.cChannel>();
 
         internal int counter = 0;
 
@@ -70,8 +75,29 @@ namespace Vaser
             
         }
 
+        internal void RegisterRequest(ushort ContainerID, OON.cRequest _Request)
+        {
+            RequestDictionary.Add(ContainerID, _Request);
+        }
+
+        internal void RegisterChannel(ushort ContainerID, OON.cChannel _Channel)
+        {
+            ChannelDictionary.Add(ContainerID, _Channel);
+        }
+
+        internal void RemoveDisconectingLinkFromRequests(Link _lnk)
+        {
+            foreach(OON.cRequest r in RequestDictionary.Values)
+            {
+                r.RemoveDisconnectedLink(_lnk);
+            }
+        }
+
         volatile bool QueueLock = false;
         object _EventWorker_lock = new object();
+        OON.cChannel channel = null;
+        OON.cRequest request = null;
+        PacketEventArgs args = null;
         private void EventWorker(object threadContext)
         {
             //operating Threadsafe
@@ -83,16 +109,36 @@ namespace Vaser
                     //Debug.WriteLine("EventWorker");
                     foreach (Packet_Recv pak in templist)
                     {
-                        PacketEventArgs args = new PacketEventArgs();
+                        if (!pak.link.IsConnected) break; //Stop processing packets when client is disconnected
+
+                        args = new PacketEventArgs();
                         args.lnk = pak.link;
                         args.pak = pak;
                         args.portal = this;
-                        OnIncomingPacket(args);
+
+                        if (ChannelDictionary.TryGetValue(pak.ContainerID, out channel))
+                        {
+                            //Console.WriteLine("RequestDictionary");
+                            channel.ProcessPacket(this, args);
+                        }
+                        else
+                        {
+                            // wenn con id in request liste dann
+                            if (RequestDictionary.TryGetValue(pak.ContainerID, out request))
+                            {
+                                //Console.WriteLine("RequestDictionary");
+                                request.ProcessPacket(this, args);
+                            }
+                            else
+                            {
+                                //Console.WriteLine("OnIncomingPacket");
+                                OnIncomingPacket(args);
+                            }
+                        }
+                        
                     }
                     templist = GetPakets();
                 }
-                
-                //templist.Clear();
             }
         }
 
@@ -277,10 +323,5 @@ namespace Vaser
 
     }
 
-    public class PacketEventArgs : EventArgs
-    {
-        public Link lnk { get; set; }
-        public Packet_Recv pak { get; set; }
-        public Portal portal { get; set; }
-    }
+   
 }

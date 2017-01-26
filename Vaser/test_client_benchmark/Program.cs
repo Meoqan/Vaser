@@ -18,12 +18,13 @@ namespace test_client_benchmark
             public string test = "test text!";
 
             //also 1D arrays are posible
-            //public int[] array = new int[1000];
+            public int[] array = new int[10000];
         }
 
 
         static object Livinglist_lock = new object();
         static List<Link> Livinglist = new List<Link>();
+
 
         static void Main(string[] args)
         {
@@ -45,7 +46,7 @@ namespace test_client_benchmark
             int counter = 0;
             while (true)
             {
-                while (Livinglist.Count < 1)
+                while (Livinglist.Count < 1000)
                 {
                     lock (Livinglist_lock)
                     {
@@ -110,7 +111,7 @@ namespace test_client_benchmark
                     {
                         if (con2.ID < 0) Console.WriteLine("Decode error: " + con2.ID);
                         //if (con2.ID > 100) Console.WriteLine("Decode error: " + con2.ID);
-                        if (con2.ID < 500)
+                        if (con2.ID < 5000)
                         {
                             //Console.WriteLine("Ping! " + counter + " CounterID" + con2.ID + " Object:" + e.pak.ObjectID);
 

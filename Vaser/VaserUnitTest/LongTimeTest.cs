@@ -3,8 +3,8 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Vaser;
 using System.Collections.Generic;
 using System.Threading;
-using System.Net.Sockets;
 using System.Diagnostics;
+using Vaser.ConnectionSettings;
 
 namespace VaserUnitTest
 {

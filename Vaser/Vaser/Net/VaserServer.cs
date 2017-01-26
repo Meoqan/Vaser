@@ -1,13 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
-using System.Security.Cryptography.X509Certificates;
 using System.Diagnostics;
+using System.IO.Pipes;
+using Vaser.ConnectionSettings;
 
 namespace Vaser
 {
@@ -19,10 +17,12 @@ namespace Vaser
     {
         //private object _ThreadLock = new object();
         private TcpListener _TCPListener;
+        NamedPipeServerStream _pipeServer;
+
         //private Thread _ListenThread;
         private volatile bool _ServerOnline = true;
         //private System.Timers.Timer _aTimer;
-        private static System.Timers.Timer _GCTimer;
+        private static Timer _GCTimer;
 
         private object _ConnectionList_ThreadLock = new object();
         private List<Connection> _ConnectionList = new List<Connection>();
@@ -106,7 +106,11 @@ namespace Vaser
         /// </summary>
         public void Stop()
         {
-            _ServerOnline = false;
+            ServerOnline = false;
+            if (_TCPListener != null)
+            {
+                _TCPListener.Stop();
+            }
             //_aTimer.Enabled = false;
         }
 
@@ -116,7 +120,8 @@ namespace Vaser
         public static void StopEngine()
         {
             Options.Operating = false;
-            _GCTimer.Enabled = false;
+            _GCTimer.Dispose();
+            _GCTimer = null;
         }
 
 
@@ -127,22 +132,18 @@ namespace Vaser
         {
             try
             {
-                _TCPListener.Start();
+                if (_ServerOption == VaserOptions.ModeNamedPipeServerStream)
+                {
+                }else { 
+                    _TCPListener.Start();
+                }
 
-                /*_aTimer = new System.Timers.Timer(1);
-                _aTimer.Elapsed += ListenForClients;
-                _aTimer.AutoReset = true;
-                _aTimer.Enabled = true;*/
-
-                new Thread(ListenForClients).Start();
+                DoBeginAcceptTcpClient();
 
                 if (_GCTimer == null)
                 {
                     System.Runtime.GCSettings.LatencyMode = System.Runtime.GCLatencyMode.LowLatency;
-                    _GCTimer = new System.Timers.Timer(15000);
-                    _GCTimer.Elapsed += GC_Collect;
-                    _GCTimer.AutoReset = true;
-                    _GCTimer.Enabled = true;
+                    _GCTimer = new Timer(GC_Collect,null,15000,15000);
                 }
             }
             catch (Exception ex)
@@ -168,6 +169,30 @@ namespace Vaser
                 PCollection = PColl;
                 _TCPListener = new TcpListener(LocalAddress, Port);
 
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
+        /// <summary>
+        /// Creates a new unencrypted TCP Server and listen for clients
+        /// </summary>
+        /// <param name="LocalAddress">IPAddress.Any</param>
+        /// <param name="Port">3000</param>
+        /// <param name="PortalCollection">the Portal Collection</param>
+        public VaserServer(string Pipename, PortalCollection PColl)
+        {
+            if (PColl == null) throw new Exception("PortalCollection is needed!");
+
+            try
+            {
+                ServerOption = VaserOptions.ModeNamedPipeServerStream;
+                PColl.Active = true;
+                PCollection = PColl;
+
+                _pipeServer = new NamedPipeServerStream(Pipename);
             }
             catch (Exception ex)
             {
@@ -228,32 +253,46 @@ namespace Vaser
             }
         }
 
-        private void GC_Collect(Object source, System.Timers.ElapsedEventArgs e)
+        private void GC_Collect(object source)
         {
             GC.Collect();
         }
-        //Object source, System.Timers.ElapsedEventArgs e
-        private void ListenForClients()
-        {
-            while (ServerOnline && Options.Operating)
-            {
-                try
-                {
-                    while (_TCPListener.Pending())
-                    {
-                        Socket Client = _TCPListener.AcceptSocket();
 
-                        //ThreadPool.QueueUserWorkItem(QueueNewConnection, Client);
+        private void DoBeginAcceptTcpClient()
+        {
+            _TCPListener.BeginAcceptSocket(
+                new AsyncCallback(DoAcceptTcpClientCallback),
+                null);
+        }
+
+        private void DoAcceptTcpClientCallback(IAsyncResult ar)
+        {
+            try
+            {
+                if (ServerOnline && Options.Operating)
+                {
+                    Socket Client = _TCPListener.EndAcceptSocket(ar);
+                    if (Client != null)
+                    {
                         QueueNewConnection(Client);
+
+                        DoBeginAcceptTcpClient();
+                    }
+                    else
+                    {
+                        Debug.WriteLine("Client was null");
+                        DoStop();
                     }
                 }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine("ERROR in VaserServer.ListenForClients() > " + ex.ToString());
-                }
-                Thread.Sleep(1);
+            }catch(Exception ex)
+            {
+                Debug.WriteLine("exeption "+ ex.ToString());
+                DoStop();
             }
+        }
 
+        void DoStop()
+        {
             if (!ServerOnline || !Options.Operating)
             {
                 //_aTimer.Enabled = false;

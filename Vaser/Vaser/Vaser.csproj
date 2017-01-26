@@ -29,7 +29,8 @@
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
     <OutputPath>bin\Release\</OutputPath>
-    <DefineConstants>TRACE</DefineConstants>
+    <DefineConstants>
+    </DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <Prefer32Bit>false</Prefer32Bit>
@@ -38,15 +39,19 @@
     <RegisterForComInterop>false</RegisterForComInterop>
     <GenerateSerializationAssemblies>Auto</GenerateSerializationAssemblies>
     <UseVSHostingProcess>false</UseVSHostingProcess>
+    <DebugSymbols>true</DebugSymbols>
+    <DocumentationFile>bin\Release\Vaser.XML</DocumentationFile>
+  </PropertyGroup>
+  <PropertyGroup>
+    <SignAssembly>false</SignAssembly>
+  </PropertyGroup>
+  <PropertyGroup>
+    <AssemblyOriginatorKeyFile>Gerull.Vaser.pfx</AssemblyOriginatorKeyFile>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Core" />
-    <Reference Include="System.Xml.Linq" />
-    <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
-    <Reference Include="System.Data" />
-    <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="global\VaserKerberosClient.cs" />
@@ -55,9 +60,10 @@
     <Compile Include="global\VaserSSLServer.cs" />
     <Compile Include="IDPool.cs" />
     <Compile Include="global\VaserOptions.cs" />
-    <Compile Include="OON\Command.cs" />
+    <Compile Include="OON\cChannel.cs" />
     <Compile Include="OON\Container.cs" />
-    <Compile Include="OON\Function.cs" />
+    <Compile Include="OON\cRequest.cs" />
+    <Compile Include="OON\cStatus.cs" />
     <Compile Include="OON\Link.cs" />
     <Compile Include="OON\NetVector2.cs" />
     <Compile Include="OON\NetVector3.cs" />
@@ -70,6 +76,9 @@
     <Compile Include="Net\VaserServer.cs" />
     <Compile Include="OON\PortalCollection.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Gerull.Vaser.pfx" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

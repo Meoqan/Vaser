@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Vaser
+﻿namespace Vaser
 {
     /// <summary>
     /// This class holds encryptionsmodes for vaser connections.
@@ -23,6 +17,15 @@ namespace Vaser
         /// This mode uses SSL TLS 1.2 for trusted internet connections. Vaser can't connect to invalid or self signed certificates.
         /// </summary>
         public static readonly VaserOptions ModeSSL = new VaserOptions(2);
+        /// <summary>
+        /// This mode uses named pipes for server internal comunication. Server pipe.
+        /// </summary>
+        public static readonly VaserOptions ModeNamedPipeServerStream = new VaserOptions(3);
+        /// <summary>
+        /// This mode uses named pipes for server internal comunication. Client pipe.
+        /// </summary>
+        public static readonly VaserOptions ModeNamedPipeClientStream = new VaserOptions(4);
+
 
         internal int mode = 0;
 

@@ -1,8 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Threading;
 using System.IO;
 using System.Net;
@@ -10,9 +7,8 @@ using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Authentication;
 using System.Security.Principal;
-using System.Security.Cryptography.X509Certificates;
 using System.Diagnostics;
-using System.Timers;
+using Vaser.ConnectionSettings;
 
 namespace Vaser
 {
@@ -33,7 +29,7 @@ namespace Vaser
         internal delegate void QueueSendHidden();
         internal QueueSendHidden QueueSend = null;
 
-        private PortalCollection _PCollection = null;
+        internal PortalCollection _PCollection = null;
 
         private int bytesRead;
 
@@ -70,8 +66,6 @@ namespace Vaser
         private bool IsInQueue = false;
         private bool IsInSendQueue = false;
 
-        private System.Timers.Timer _aTimer;
-
         private AsyncCallback mySendNotEncryptedCallback = null;
         private AsyncCallback myReceiveNotEncryptedCallback = null;
         private AsyncCallback mySendKerberosCallback = null;
@@ -79,7 +73,7 @@ namespace Vaser
         private AsyncCallback mySendSSLCallback = null;
         private AsyncCallback myReceiveSSLCallback = null;
 
-        private System.Timers.Timer _BootUpTimer = null;
+        private Timer _BootUpTimer = null;
         private int _BootUpTimes = 0;
 
         Packet_Send byteData = null;
@@ -160,10 +154,7 @@ namespace Vaser
                 _rbr2 = new BinaryReader(_rms2);
 
             }
-
-            _aTimer = new System.Timers.Timer(5000);
-            _aTimer.Elapsed += new ElapsedEventHandler(OnTimedEvent);
-
+            
             _Mode = Mode;
             _PCollection = PColl;
 
@@ -203,7 +194,7 @@ namespace Vaser
         }
 
 
-        private void _BootUpTimer_Elapsed(object sender, ElapsedEventArgs e)
+        private void _BootUpTimer_Elapsed(object sender)
         {
             _BootUpTimes++;
 
@@ -212,7 +203,7 @@ namespace Vaser
             if (_BootUpTimes > 150)
             {
                 _BootUpTimes = 0;
-                _BootUpTimer.Stop();
+                _BootUpTimer.Dispose();
 
                 lock (_ReceiveDisposelock)
                 {
@@ -252,10 +243,7 @@ namespace Vaser
             //This conntects the client
             //first we need an rescue timer
 
-            _BootUpTimer = new System.Timers.Timer(100);
-            _BootUpTimer.Enabled = true;
-            _BootUpTimer.Elapsed += _BootUpTimer_Elapsed;
-            _BootUpTimer.Start();
+            _BootUpTimer = new Timer(new TimerCallback(_BootUpTimer_Elapsed), null,100, 100);
 
             bool leaveInnerStreamOpen = false;
 
@@ -329,6 +317,8 @@ namespace Vaser
                         link.IsServer = true;
                     }
 
+                    link.vServer = server;
+
                     BootupDone = true;
                     server.AddNewLink(link);
 
@@ -390,15 +380,13 @@ namespace Vaser
                     if (_Mode == VaserOptions.ModeKerberos) ThreadPool.QueueUserWorkItem(ReceiveKerberos);
                     if (_Mode == VaserOptions.ModeSSL) ThreadPool.QueueUserWorkItem(ReceiveSSL);
                 }
-
-                _aTimer.Enabled = true;
-                _aTimer.Start();
+                
 
             }
             catch (AuthenticationException e)
             {
                 Debug.WriteLine("Authentication failed. " + e.ToString());
-                _BootUpTimer.Stop();
+                _BootUpTimer.Dispose();
 
                 Dispose();
                 return;
@@ -406,14 +394,13 @@ namespace Vaser
             catch (Exception e)
             {
                 Debug.WriteLine("Authentication failed. " + e.ToString());
-                _BootUpTimer.Stop();
+                _BootUpTimer.Dispose();
 
                 Dispose();
                 return;
             }
             // encryption END
-
-            _BootUpTimer.Stop();
+            
             _BootUpTimer.Dispose();
             _BootUpTimer = null;
         }
@@ -430,18 +417,7 @@ namespace Vaser
             }
         }
 
-
-        private void OnTimedEvent(object source, ElapsedEventArgs e)
-        {
-            //Debug.WriteLine("Send keep alive packet {0}", e.SignalTime);
-            /*lock (_link.SendData_Lock)
-            {
-                if (_link.SendDataPortalArrayOUTPUT[0] != null) _link.SendDataPortalArrayOUTPUT[0].Enqueue(_timeoutpacket);
-            }
-            QueueSend();*/
-        }
-
-
+        
         internal void QueueStreamDecrypt()
         {
             lock (_IsInQueue_Lock)
@@ -722,11 +698,7 @@ namespace Vaser
             }
 
             if (server != null) server.RemoveFromConnectionList(this);
-
-            _aTimer.Stop();
-            _aTimer.Dispose();
-            _aTimer = null;
-
+            
             lock (_ReceiveDisposelock)
             {
                 lock (_SendDisposelock)

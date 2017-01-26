@@ -7,22 +7,24 @@ using System.Threading.Tasks;
 using System.Diagnostics;
 using System.Security.Cryptography.X509Certificates;
 using Vaser;
+using Vaser.OON;
+using Vaser.ConnectionSettings;
 
 namespace test_server
 {
+    // Build your data container
+    public class TestContainer : Container
+    {
+        //only public, nonstatic and standard datatypes can be transmitted
+        //maximum packetsize is 65000 bytes
+        public int ID = 1;
+        public string test = "test text!";
+
+        public byte[] by = new byte[1000];
+    }
+
     public class Program
     {
-        // Build your data container
-        public class TestContainer : Container
-        {
-            //only public, nonstatic and standard datatypes can be transmitted
-            //maximum packetsize is 65000 bytes
-            public int ID = 1;
-            public string test = "test text!";
-
-            public byte[] by = new byte[1000];
-        }
-
         // create new container
 
         static int testmode = 0;
@@ -48,6 +50,13 @@ namespace test_server
             system = new Portal(100);
             PortalCollection PC = new PortalCollection();
             PC.RegisterPortal(system);
+
+            TestRequest myRequest = new TestRequest();
+            PC.RegisterRequest(myRequest, system, 501);
+
+
+            TestChannel myChannel = new TestChannel();
+            PC.RegisterChannel(myChannel, system, 502);
 
             system.IncomingPacket += OnSystemPacket;
 
@@ -95,7 +104,7 @@ namespace test_server
             VaserKerberosServer kerberos = new VaserKerberosServer();
             VaserServer Server1 = new VaserServer(System.Net.IPAddress.Any, 3100, PC);
             Server1.NewLink += OnNewLink;
-
+            Server1.DisconnectingLink += OnDisconnectingLink;
             Server1.Start();
 
             Console.WriteLine("");
@@ -171,6 +180,12 @@ namespace test_server
                 Console.WriteLine(es.ToString());
             }
         }
+
+        static void OnDisconnectingLink(object p, LinkEventArgs e)
+        {
+            Console.WriteLine("Disconnecting");
+        }
+
 
         static TestContainer con3 = new TestContainer();
         static void OnSystemPacket(object p, PacketEventArgs e)

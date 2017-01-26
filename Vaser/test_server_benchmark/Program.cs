@@ -18,12 +18,20 @@ namespace test_server_benchmark
             public string test = "test text!";
 
             //also 1D arrays are posible
-            //public int[] array = new int[1000];
+            public int[] array = new int[1000];
         }
 
         //static Portal system = null;
         // create new container
         //static TestContainer con1 = new TestContainer();
+
+        static int pkt
+        {
+            get;
+            set;
+        }
+
+        static Timer t = null;
 
         //create connection managing lists
         static object Livinglist_lock = new object();
@@ -32,8 +40,18 @@ namespace test_server_benchmark
         static Portal system = null;
         static uint object_counter = 0;
 
+        static void TimerCallback(object sender)
+        {
+            int x = pkt;
+            pkt = 0;
+
+            Console.WriteLine("Packets in 10 Sek: "+ x);
+        }
+
         static void Main(string[] args)
         {
+            t = new Timer(TimerCallback,null,10000,10000);
+
             //Client initalisieren
             system = new Portal(100);
             PortalCollection PC = new PortalCollection();
@@ -60,7 +78,7 @@ namespace test_server_benchmark
 
             //run the server
             Console.ReadKey();
-
+            t.Dispose();
             //close the server
             Server1.Stop();
             Server2.Stop();
@@ -70,7 +88,7 @@ namespace test_server_benchmark
         static void OnNewLinkServer1(object p, LinkEventArgs e)
         {
 
-            Console.WriteLine("CL1 CON " + object_counter);
+            //Console.WriteLine("CL1 CON " + object_counter);
             lock (Livinglist_lock)
             {
                 Livinglist.Add(e.lnk);
@@ -90,7 +108,7 @@ namespace test_server_benchmark
         static void OnNewLinkServer2(object p, LinkEventArgs e)
         {
 
-            Console.WriteLine("             CL2 CON " + object_counter);
+            //Console.WriteLine("             CL2 CON " + object_counter);
             lock (Livinglist_lock)
             {
                 Livinglist.Add(e.lnk);
@@ -108,7 +126,7 @@ namespace test_server_benchmark
 
         static void OnDisconnectingLinkServer1(object p, LinkEventArgs e)
         {
-            Console.WriteLine("                        CL1 DIS");
+            //Console.WriteLine("                        CL1 DIS");
             lock (Livinglist_lock)
             {
                 Livinglist.Remove(e.lnk);
@@ -117,7 +135,7 @@ namespace test_server_benchmark
 
         static void OnDisconnectingLinkServer2(object p, LinkEventArgs e)
         {
-            Console.WriteLine("                                  CL2 DIS");
+            //Console.WriteLine("                                  CL2 DIS");
             lock (Livinglist_lock)
             {
                 Livinglist.Remove(e.lnk);
@@ -135,6 +153,7 @@ namespace test_server_benchmark
                 //Console.WriteLine("Pong!  CounterID" + con2.ID + " Object:" + e.pak.ObjectID);
                 // the last 2 digits are manually set [1]
                 e.portal.SendContainer(e.lnk, con2, 1, e.pak.ObjectID);
+                pkt++;
             }
             else
             {

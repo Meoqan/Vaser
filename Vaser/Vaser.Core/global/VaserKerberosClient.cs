@@ -1,18 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Net;
+﻿using System.Net;
 using System.Net.Security;
-using System.Net.Sockets;
-using System.Security.Authentication;
-using System.Security.Cryptography.X509Certificates;
-using System.Diagnostics;
 using System.Security.Authentication.ExtendedProtection;
 using System.Security.Principal;
 
-namespace Vaser
+namespace Vaser.ConnectionSettings
 {
     public class VaserKerberosClient
     {

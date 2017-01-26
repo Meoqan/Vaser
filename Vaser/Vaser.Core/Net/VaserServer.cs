@@ -1,13 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
-using System.Security.Cryptography.X509Certificates;
 using System.Diagnostics;
+using Vaser.ConnectionSettings;
 
 namespace Vaser
 {
@@ -106,8 +103,12 @@ namespace Vaser
         /// </summary>
         public void Stop()
         {
-            _ServerOnline = false;
-            if(_aTimer != null)_aTimer.Dispose();
+            ServerOnline = false;
+            if (_TCPListener != null)
+            {
+                _TCPListener.Stop();
+            }
+            if (_aTimer != null)_aTimer.Dispose();
         }
 
         /// <summary>
