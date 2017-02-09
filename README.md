@@ -21,6 +21,6 @@ Build your own simple Datapackages for your Application:
 ![GitHub Logo](http://clusterware.de/images/MyDataPacket.png)
 
 
-If you need help or have suggestions, please visit my project page or send me a message.
+If you need help or have suggestions, please send me a message.
 
 ![GitHub Logo](http://clusterware.de/images/cluster-logo-s.png)
