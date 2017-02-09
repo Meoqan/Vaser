@@ -22,3 +22,5 @@ Build your own simple Datapackages for your Application:
 
 
 If you need help or have suggestions, please visit my project page or send me a message.
+
+![GitHub Logo](http://clusterware.de/images/cluster-logo-s.png)
