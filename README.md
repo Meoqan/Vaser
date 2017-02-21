@@ -23,6 +23,8 @@ The main goal of this engine is simplified _object-oriented networking_.
 + ready for use request-response-pattern classes
 + robust programming architecture
 
+**The Vaser API and reference catalog can be found [here](http://clusterware.de/Doc/).**
+
 Build your own simple Datapackages for your Application:
 
 ![GitHub Logo](http://clusterware.de/images/MyDataPacket.png)
