@@ -36,10 +36,10 @@ namespace Vaser
 
         private byte[] _buff = new byte[65012];
 
-        private VaserServer _server;
+        //private VaserServer _server;
 
-        private Link _link;
-        private IPAddress _IPv4Address;
+        //private Link _link;
+        //private IPAddress _IPv4Address;
 
         private object _WorkAtStream_Lock = new object();
 
@@ -91,14 +91,8 @@ namespace Vaser
         /// </summary>
         public IPAddress IPv4Address
         {
-            get
-            {
-                return _IPv4Address;
-            }
-            set
-            {
-                _IPv4Address = value;
-            }
+            get;
+            internal set;
         }
 
         /// <summary>
@@ -106,26 +100,14 @@ namespace Vaser
         /// </summary>
         public Link link
         {
-            get
-            {
-                return _link;
-            }
-            set
-            {
-                _link = value;
-            }
+            get;
+            internal set;
         }
 
         internal VaserServer server
         {
-            get
-            {
-                return _server;
-            }
-            set
-            {
-                _server = value;
-            }
+            get;
+            set;
         }
 
         /// <summary>
@@ -444,7 +426,7 @@ namespace Vaser
 
         internal void QueueSendNotEncrypted()
         {
-            lock (_link.SendData_Lock)
+            lock (link.SendData_Lock)
             {
                 if (IsInSendQueue == false)
                 {
@@ -457,7 +439,7 @@ namespace Vaser
 
         internal void QueueSendKerberos()
         {
-            lock (_link.SendData_Lock)
+            lock (link.SendData_Lock)
             {
                 if (IsInSendQueue == false)
                 {
@@ -470,7 +452,7 @@ namespace Vaser
 
         internal void QueueSendSSL()
         {
-            lock (_link.SendData_Lock)
+            lock (link.SendData_Lock)
             {
                 if (IsInSendQueue == false)
                 {
@@ -774,7 +756,7 @@ namespace Vaser
             if (link != null)
             {
                 link.Dispose();
-                link = null;
+                //link = null;
             }
 
             Debug.WriteLine("Link.Dispose finished");
@@ -978,15 +960,15 @@ namespace Vaser
         private bool GetPackets()
         {
             SendFound = false;
-            lock (_link.SendData_Lock)
+            lock (link.SendData_Lock)
             {
-                for (int x = 0; x < _link.SendDataPortalArrayOUTPUT.Length; x++)
+                for (int x = 0; x < link.SendDataPortalArrayOUTPUT.Length; x++)
                 {
-                    if (_link.SendDataPortalArrayOUTPUT[x].Count > 0)
+                    if (link.SendDataPortalArrayOUTPUT[x].Count > 0)
                     {
 
                         //Debug.WriteLine("data");
-                        byteData = _link.SendDataPortalArrayOUTPUT[x].Dequeue();
+                        byteData = link.SendDataPortalArrayOUTPUT[x].Dequeue();
                         SendFound = true;
                         if (byteData._CallEmpybuffer) _CallEmptyBuffer = true;
 

@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 14
-VisualStudioVersion = 14.0.25420.1
+# Visual Studio 15
+VisualStudioVersion = 15.0.26228.9
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vaser", "Vaser\Vaser.csproj", "{18FBB9B5-1BFF-411E-ABCD-B08AAFEE2D0C}"
 EndProject
@@ -27,11 +27,11 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "test_server_benchmark", "te
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VaserUnitTest", "VaserUnitTest\VaserUnitTest.csproj", "{22E37FF6-C12D-4A13-A4C7-B240BA7385C2}"
 EndProject
-Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "test_CoreServer", "test_CoreServer\test_CoreServer.xproj", "{DBB5FA62-D82D-4410-BF8A-01606A428780}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "test_CoreServer", "test_CoreServer\test_CoreServer.csproj", "{DBB5FA62-D82D-4410-BF8A-01606A428780}"
 EndProject
-Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "test_CoreClient", "test_CoreClient\test_CoreClient.xproj", "{8D2A4A56-966E-4523-ADAB-11BD5679F4FB}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "test_CoreClient", "test_CoreClient\test_CoreClient.csproj", "{8D2A4A56-966E-4523-ADAB-11BD5679F4FB}"
 EndProject
-Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "Vaser.Core", "Vaser.Core\Vaser.Core.xproj", "{6B2545B2-DAB7-426D-B554-9533308342E3}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Vaser.Core", "Vaser.Core\Vaser.Core.csproj", "{6B2545B2-DAB7-426D-B554-9533308342E3}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vaser.iOS", "Vaser.iOS\Vaser.iOS.csproj", "{C5DB3665-0BB8-41A9-BB4F-F0B8DAB83E17}"
 EndProject

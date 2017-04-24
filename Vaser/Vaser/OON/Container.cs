@@ -7,7 +7,7 @@ using System.Diagnostics;
 namespace Vaser
 {
     /// <summary>
-    /// This class is for inheritance your data packets.
+    /// The Container class is for inheritance your data packets.
     /// use: public class my_datapacket : Container
     /// </summary>
     public class Container
@@ -40,6 +40,9 @@ namespace Vaser
             internal writedata wd = null;
         }
 
+        /// <summary>
+        /// The Container class is for inheritance your data packets.
+        /// </summary>
         public Container()
         {
             //_ms = new MemoryStream();
@@ -53,7 +56,7 @@ namespace Vaser
         }
 
         /// <summary>
-        /// Free all container resources
+        /// Free all container resources.
         /// </summary>
         public void Dispose()
         {
@@ -125,6 +128,7 @@ namespace Vaser
         /// </summary>
         /// <param name="pak">the packet</param>
         /// <param name="portal">the portal</param>
+        /// <returns>Is true if the unpacking was successful.</returns>
         public bool UnpackContainer(Packet_Recv pak, Portal portal)
         {
             try

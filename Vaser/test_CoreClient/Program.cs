@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Vaser;
 using System.Threading;
+using Vaser.ConnectionSettings;
 
 namespace test_CoreClient
 {
@@ -18,26 +19,29 @@ namespace test_CoreClient
             public byte[] by = new byte[10000];
         }
         // create new container
-        static TestContainer con1 = new TestContainer();
+
+        static TestContainer con2 = new TestContainer();
         public static void Main(string[] args)
         {
             Run();
         }
 
         public static void Run()
-        { 
-
+        {
             bool online = true;
 
             //Client initalisieren
             Portal system = new Portal(100);
             PortalCollection PC = new PortalCollection();
             PC.RegisterPortal(system);
-
             system.IncomingPacket += OnSystemPacket;
+            
 
-            //Create a TestCert in CMD: makecert -sr LocalMachine -ss root -r -n "CN=localhost" -sky exchange -sk 123456
+            // ###########################################################
+            // Create a TestCert in CMD: makecert -sr LocalMachine -ss root -r -n "CN=localhost" -sky exchange -sk 123456
             // Do not use in Production | do not use localhost -> use your machinename!
+            // ###########################################################
+
 
             /*//Import Test Cert from local store
             X509Certificate2Collection cCollection = new X509Certificate2Collection();
@@ -72,9 +76,10 @@ namespace test_CoreClient
             _aTimer.Elapsed += DoPackets;
             _aTimer.AutoReset = true;
             _aTimer.Enabled = true;*/
-            Thread.Sleep(1000);
-            
-            //VaserSSLClient ssl = new VaserSSLClient("localhost");
+            Thread.Sleep(100);
+
+            VaserSSLClient ssl = new VaserSSLClient("localhost");
+            VaserKerberosClient kerberos = new VaserKerberosClient();
             Link lnk1 = VaserClient.ConnectClient("localhost", 3100, PC);
             lnk1.EmptyBuffer += OnEmptyBuffer;
 
@@ -82,9 +87,10 @@ namespace test_CoreClient
 
             //working
             if (lnk1.IsConnected) Console.WriteLine("Test. Con OK");
+            
             while (online)
             {
-
+                
                 Thread.Sleep(100);
 
                 //entfernen
@@ -103,12 +109,13 @@ namespace test_CoreClient
             //Console.WriteLine("OnEmptyBuffer called!");
         }
 
+        static TestContainer con1 = new TestContainer();
         static void OnSystemPacket(object p, PacketEventArgs e)
         {
             //unpack the packet, true if the decode was successful
             if (con1.UnpackContainer(e.pak, e.portal))
             {
-                // Console.WriteLine("PACK");
+                //Console.WriteLine("PACK");
                 e.portal.SendContainer(e.lnk, con1, 1, 1);
                 //Portal.Finialize();
             }

@@ -4,6 +4,9 @@ using System.Security.Principal;
 
 namespace Vaser.ConnectionSettings
 {
+    /// <summary>
+    /// This class provides security options for Kerberos encrypted client connections.
+    /// </summary>
     public class VaserKerberosClient
     {
 
@@ -18,14 +21,21 @@ namespace Vaser.ConnectionSettings
         /// <summary>
         /// Called by clients to authenticate the client, and optionally the server, in a client-server connection. The authentication process uses the specified client credential.
         /// </summary>
-        /// <param name="credential"></param>
-        /// <param name="targetName"></param>
+        /// <param name="credential">The NetworkCredential that is used to establish the identity of the client.</param>
+        /// <param name="targetName">The Service Principal Name (SPN) that uniquely identifies the server to authenticate.</param>
         public VaserKerberosClient(NetworkCredential credential, string targetName)
         {
             _credential = credential;
             _targetName = targetName;
         }
 
+        /// <summary>
+        /// Called by clients to authenticate the client, and optionally the server, in a client-server connection. The authentication process uses the specified credentials and authentication options.
+        /// </summary>
+        /// <param name="credential">The NetworkCredential that is used to establish the identity of the client.</param>
+        /// <param name="targetName">The Service Principal Name (SPN) that uniquely identifies the server to authenticate.</param>
+        /// <param name="requiredProtectionLevel">One of the ProtectionLevel values, indicating the security services for the stream.</param>
+        /// <param name="requiredImpersonationLevel">One of the TokenImpersonationLevel values, indicating how the server can use the client's credentials to access resources.</param>
         public VaserKerberosClient(NetworkCredential credential, string targetName, ProtectionLevel requiredProtectionLevel, TokenImpersonationLevel requiredImpersonationLevel)
         {
             _credential = credential;

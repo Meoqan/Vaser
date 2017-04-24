@@ -18,7 +18,7 @@ namespace Vaser
         /// <summary>
         /// Creates a new pool of IDs
         /// </summary>
-        /// <param name="MaxIDs"></param>
+        /// <param name="MaxIDs">Maximum amount of IDs.</param>
         public IDPool(uint MaxIDs)
         {
             //if (MaxIDs < 0) throw new Exception("MaxIDs must be an positive integer");
@@ -35,7 +35,7 @@ namespace Vaser
         /// <summary>
         /// Returns a free ID from the pool
         /// </summary>
-        /// <returns>ID</returns>
+        /// <returns>A free ID</returns>
         public uint GetFreeID()
         {
             lock (threadlock)

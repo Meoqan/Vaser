@@ -47,6 +47,9 @@ namespace Vaser
         public event EventHandler<LinkEventArgs> DisconnectingLink;
 
 
+        /// <summary>
+        /// The PortalCollection of this server.
+        /// </summary>
         public PortalCollection PCollection
         {
             get
@@ -59,6 +62,9 @@ namespace Vaser
             }
         }
 
+        /// <summary>
+        /// The used options for this server, such as unencrypted, kerberos or SSL.
+        /// </summary>
         public VaserOptions ServerOption
         {
             get
@@ -160,11 +166,11 @@ namespace Vaser
         }
 
         /// <summary>
-        /// Creates a new unencrypted TCP Server and listen for clients
+        /// Creates a new unencrypted TCP server and listen for clients.
         /// </summary>
-        /// <param name="LocalAddress">IPAddress.Any</param>
-        /// <param name="Port">3000</param>
-        /// <param name="PortalCollection">the Portal Collection</param>
+        /// <param name="LocalAddress">The local IP-Address for listening - IPAddress.Any</param>
+        /// <param name="Port">The local port of the server.</param>
+        /// <param name="PColl">The Portal Collection</param>
         public VaserServer(IPAddress LocalAddress, int Port, PortalCollection PColl)
         {
             if (PColl == null) throw new Exception("PortalCollection is needed!");
@@ -184,11 +190,10 @@ namespace Vaser
         }
 
         /// <summary>
-        /// Creates a new unencrypted TCP Server and listen for clients
+        /// Creates a new internal pipe server for a client.
         /// </summary>
-        /// <param name="LocalAddress">IPAddress.Any</param>
-        /// <param name="Port">3000</param>
-        /// <param name="PortalCollection">the Portal Collection</param>
+        /// <param name="Pipename">The name of the pipe.</param>
+        /// <param name="PColl">The PortalCollection.</param>
         public VaserServer(string Pipename, PortalCollection PColl)
         {
             if (PColl == null) throw new Exception("PortalCollection is needed!");
@@ -208,12 +213,12 @@ namespace Vaser
         }
 
         /// <summary>
-        /// Creates a new Kerberos Server and listen for clients
+        /// Creates a new Kerberos Server and listen for clients.
         /// </summary>
         /// <param name="LocalAddress">IPAddress.Any</param>
-        /// <param name="Port">3000</param>
-        /// <param name="PortalCollection">the Portal Collection</param>
-        /// <param name="Kerberos">Kerberos connection settings</param>
+        /// <param name="Port">The local port of the server.</param>
+        /// <param name="PColl">The PortalCollection.</param>
+        /// <param name="Kerberos">Kerberos connection settings.</param>
         public VaserServer(IPAddress LocalAddress, int Port, PortalCollection PColl, VaserKerberosServer Kerberos)
         {
             if (Kerberos == null) throw new Exception("Missing Kerberos options in VaserServer(...)");
@@ -236,12 +241,12 @@ namespace Vaser
         }
 
         /// <summary>
-        /// Creates a new SSL Server and listen for clients
+        /// Creates a new SSL Server and listen for clients.
         /// </summary>
         /// <param name="LocalAddress">IPAddress.Any</param>
-        /// <param name="Port">3000</param>
-        /// <param name="PortalCollection">the Portal Collection</param>
-        /// <param name="SSL">SSL connection settings</param>
+        /// <param name="Port">The local port of the server.</param>
+        /// <param name="PColl">The PortalCollection.</param>
+        /// <param name="SSL">SSL connection settings.</param>
         public VaserServer(IPAddress LocalAddress, int Port, PortalCollection PColl, VaserSSLServer SSL)
         {
             if (SSL == null) throw new Exception("Missing SSL options in VaserServer(...)");
@@ -383,6 +388,10 @@ namespace Vaser
             return LinkListTEMP;
         }
 
+        /// <summary>
+        /// Raises an event when a new client is connected.
+        /// </summary>
+        /// <param name="e">Contains the connection link.</param>
         protected virtual void OnNewLink(LinkEventArgs e)
         {
 
@@ -404,7 +413,10 @@ namespace Vaser
 
         }
 
-
+        /// <summary>
+        /// Raises an event when a client is disconnected.
+        /// </summary>
+        /// <param name="e">Contains the connection link.</param>
         protected virtual void OnDisconnectingLink(LinkEventArgs e)
         {
 
@@ -413,8 +425,14 @@ namespace Vaser
 
     }
 
+    /// <summary>
+    /// Holds the connection link.
+    /// </summary>
     public class LinkEventArgs : EventArgs
     {
+        /// <summary>
+        /// The link.
+        /// </summary>
         public Link lnk { get; set; }
     }
 }

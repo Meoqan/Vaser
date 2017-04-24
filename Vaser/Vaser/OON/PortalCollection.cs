@@ -27,11 +27,10 @@ namespace Vaser
         internal Portal[] PortalArray = new Portal[256];
 
         /// <summary>
-        /// Register a Portal.
+        /// Register an portal on this collection.
+        /// The collection should not be used before.
         /// </summary>
-        /// <param name="p">the portal you want to register</param>
-        /// <param name="ID">a channel ID you want to use</param>
-        /// <returns></returns>
+        /// <param name="portal">The portal you want to register.</param>
         public void RegisterPortal(Portal portal)
         {
             if(Active) throw new Exception("this PortalCollection is in use! please register portals before using");
@@ -46,9 +45,9 @@ namespace Vaser
         /// <summary>
         /// Register an request class for packetprocessing
         /// </summary>
-        /// <param name="RequestHandler"></param>
-        /// <param name="portal"></param>
-        /// <param name="ContainerID"></param>
+        /// <param name="RequestHandler">An initialized request class.</param>
+        /// <param name="portal">The portal.</param>
+        /// <param name="ContainerID">The container ID.</param>
         public void RegisterRequest(cRequest RequestHandler, Portal portal, ushort ContainerID)
         {
             if (Active) throw new Exception("this PortalCollection is in use! please register portals before using");
@@ -60,9 +59,9 @@ namespace Vaser
         /// <summary>
         /// Register an channel class for packetprocessing
         /// </summary>
-        /// <param name="ChannelHandler"></param>
-        /// <param name="portal"></param>
-        /// <param name="ContainerID"></param>
+        /// <param name="ChannelHandler">An initialized channel class.</param>
+        /// <param name="portal">The portal.</param>
+        /// <param name="ContainerID">The container ID.</param>
         public void RegisterChannel(cChannel ChannelHandler, Portal portal, ushort ContainerID)
         {
             if (Active) throw new Exception("this PortalCollection is in use! please register portals before using");

@@ -16,9 +16,13 @@ namespace Vaser
         private object _Connection_Lock = new object();
         internal object SendData_Lock = new object();
 
-        private Connection _Connect;
+        //private Connection _Connect;
         internal volatile bool Valid = false;
         private volatile bool Teardown = false;
+
+        /// <summary>
+        /// Indicates if the Link was disposed.
+        /// </summary>
         public volatile bool Disposed;
         private object _DisposeLock = new object();
 
@@ -31,25 +35,7 @@ namespace Vaser
         /// merged mapping for sending (removed empty spaces for reduced QoS operations)
         /// </summary>
         internal Queue<Packet_Send>[] SendDataPortalArrayOUTPUT = null;
-
-
-        //private MemoryStream _ms = null;
-        //internal BinaryWriter bw = null;
-
-        private object _AttachedObject = null;
-        private object _vCDObject = null;
-        private uint _AttachedID = 0;
-
-        //Kerberos
-        private string _UserName = string.Empty;
-
-        private bool _IsKerberos = false;
-        private bool _IsAuthenticated = false;
-        private bool _IsEncrypted = false;
-        private bool _IsMutuallyAuthenticated = false;
-        private bool _IsSigned = false;
-        private bool _IsServer = false;
-
+        
         /// <summary>
         /// EventHandler for disconnecting
         /// </summary>
@@ -66,24 +52,17 @@ namespace Vaser
         /// </summary>
         public object AttachedObject
         {
-            get
-            {
-
-                return _AttachedObject;
-
-            }
-            set
-            {
-
-                _AttachedObject = value;
-
-            }
+            get;
+            set;
         }
 
+        /// <summary>
+        /// Contains the reference of the server. Is null on the client side.
+        /// </summary>
         public VaserServer vServer
         {
             get;
-            set;
+            internal set;
         }
 
         /// <summary>
@@ -91,18 +70,8 @@ namespace Vaser
         /// </summary>
         public object vCDObject
         {
-            get
-            {
-
-                return _vCDObject;
-
-            }
-            set
-            {
-
-                _vCDObject = value;
-
-            }
+            get;
+            set;
         }
 
         /// <summary>
@@ -110,14 +79,8 @@ namespace Vaser
         /// </summary>
         public uint AttachedID
         {
-            get
-            {
-                return _AttachedID;
-            }
-            set
-            {
-                _AttachedID = value;
-            }
+            get;
+            set;
         }
 
         /// <summary>
@@ -125,86 +88,62 @@ namespace Vaser
         /// </summary>
         public string UserName
         {
-            get
-            {
-                return _UserName;
-            }
-            internal set
-            {
-                _UserName = value;
-            }
+            get;
+            internal set;
         }
 
+        /// <summary>
+        /// Indicates if the link uses kerberos.
+        /// </summary>
         public bool IsKerberos
         {
-            get
-            {
-                return _IsKerberos;
-            }
-            internal set
-            {
-                _IsKerberos = value;
-            }
+            get;
+            internal set;
         }
 
+        /// <summary>
+        /// Indicates if the link is authenticated.
+        /// </summary>
         public bool IsAuthenticated
         {
-            get
-            {
-                return _IsAuthenticated;
-            }
-            internal set
-            {
-                _IsAuthenticated = value;
-            }
+            get;
+            internal set;
         }
 
+        /// <summary>
+        /// Indicates if the link is encrypted.
+        /// </summary>
         public bool IsEncrypted
         {
-            get
-            {
-                return _IsEncrypted;
-            }
-            internal set
-            {
-                _IsEncrypted = value;
-            }
+            get;
+            internal set;
         }
 
+        /// <summary>
+        /// Indicates if the link is full authenticated and trusted.
+        /// </summary>
         public bool IsMutuallyAuthenticated
         {
-            get
-            {
-                return _IsMutuallyAuthenticated;
-            }
-            internal set
-            {
-                _IsMutuallyAuthenticated = value;
-            }
+            get;
+            internal set;
         }
 
+        /// <summary>
+        /// Indicates if the link is signed.
+        /// </summary>
         public bool IsSigned
         {
-            get
-            {
-                return _IsSigned;
-            }
-            internal set
-            {
-                _IsSigned = value;
-            }
+            get;
+            internal set;
         }
 
+        /// <summary>
+        /// Indicates if the link is from a server.
+        /// </summary>
         public bool IsServer
         {
-            get
-            {
-                return _IsServer;
-            }
-            internal set
-            {
-                _IsServer = value;
-            }
+            get;
+            internal set;
         }
 
         /// <summary>
@@ -216,29 +155,22 @@ namespace Vaser
             {
                 return _LinkList;
             }
-            internal set
-            {
-                _LinkList = value;
-            }
         }
 
         internal Connection Connect
         {
-            get
-            {
-                return _Connect;
-            }
-            set
-            {
-                _Connect = value;
-            }
+            get;
+            set;
         }
 
+        /// <summary>
+        /// Indicates if the link is connected.
+        /// </summary>
         public bool IsConnected
         {
             get
             {
-                return _Connect.StreamIsConnected;
+                return Connect.StreamIsConnected;
             }
         }
 
@@ -250,10 +182,14 @@ namespace Vaser
         {
             get
             {
-                return _Connect.IPv4Address;
+                return Connect.IPv4Address;
             }
         }
 
+        /// <summary>
+        /// Do not create links of your own.
+        /// </summary>
+        /// <param name="Pcol">The PortalCollection.</param>
         public Link(PortalCollection Pcol)
         {
             lock (SendData_Lock)
@@ -288,24 +224,32 @@ namespace Vaser
         {
             Valid = true;
 
-            if (_Connect._IsAccepted == false)
+            if (Connect._IsAccepted == false)
             {
                 
-                _Connect.AcceptConnection();
+                Connect.AcceptConnection();
 
                 lock (_Static_ThreadLock)
                 {
-                    _LinkList.Add(this);
+                    LinkList.Add(this);
                 }
             }
         }
         
+        /// <summary>
+        /// Raises an event if the link is disconnected.
+        /// </summary>
+        /// <param name="e">The link connection.</param>
         protected virtual void OnDisconnectingLink(LinkEventArgs e)
         {
 
             Disconnecting?.Invoke(this, e);
         }
 
+        /// <summary>
+        /// Raises an event if the Buffer of this link is empty. The 'OnEmptybuffer' parameter must set when a packet is send.
+        /// </summary>
+        /// <param name="e">The link connection.</param>
         protected internal virtual void OnEmptyBuffer(LinkEventArgs e)
         {
 
@@ -337,7 +281,7 @@ namespace Vaser
 
                 lock (_Static_ThreadLock)
                 {
-                    if (_LinkList.Contains(this)) _LinkList.Remove(this);
+                    if (LinkList.Contains(this)) LinkList.Remove(this);
                 }
 
                 lock (SendData_Lock)
@@ -363,7 +307,6 @@ namespace Vaser
 
                 if (!Teardown)
                 {
-
                     Teardown = true;
                     LinkEventArgs args = new LinkEventArgs();
                     args.lnk = this;

@@ -18,7 +18,7 @@ namespace test_client_benchmark
             public string test = "test text!";
 
             //also 1D arrays are posible
-            public int[] array = new int[10000];
+            //public int[] array = new int[10000];
         }
 
 
@@ -28,9 +28,7 @@ namespace test_client_benchmark
 
         static void Main(string[] args)
         {
-           
-            bool online = true;
-
+          
             //Client initalisieren
             Portal system = new Portal(100);
             PortalCollection PC = new PortalCollection();
@@ -46,7 +44,7 @@ namespace test_client_benchmark
             int counter = 0;
             while (true)
             {
-                while (Livinglist.Count < 1000)
+                while (Livinglist.Count < 500)
                 {
                     lock (Livinglist_lock)
                     {
@@ -77,8 +75,9 @@ namespace test_client_benchmark
                             Livinglist.Add(lnk2);
                         }
                     }
+                    Thread.Sleep(50);
                 }
-                Thread.Sleep(1);
+                Thread.Sleep(1000);
             }
             //Thread.Sleep(1);
             Console.ReadKey();
@@ -111,7 +110,7 @@ namespace test_client_benchmark
                     {
                         if (con2.ID < 0) Console.WriteLine("Decode error: " + con2.ID);
                         //if (con2.ID > 100) Console.WriteLine("Decode error: " + con2.ID);
-                        if (con2.ID < 5000)
+                        if (con2.ID < 100)
                         {
                             //Console.WriteLine("Ping! " + counter + " CounterID" + con2.ID + " Object:" + e.pak.ObjectID);
 

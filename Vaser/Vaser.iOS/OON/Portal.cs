@@ -7,10 +7,22 @@ using System.Diagnostics;
 
 namespace Vaser
 {
+    /// <summary>
+    /// Event data holder
+    /// </summary>
     public class PacketEventArgs : EventArgs
     {
+        /// <summary>
+        /// Link of the event.
+        /// </summary>
         public Link lnk { get; set; }
+        /// <summary>
+        /// Packet of the event.
+        /// </summary>
         public Packet_Recv pak { get; set; }
+        /// <summary>
+        /// Portal of the event.
+        /// </summary>
         public Portal portal { get; set; }
     }
 
@@ -41,8 +53,7 @@ namespace Vaser
         /// <summary>
         /// Creates a new portal. Please register it at 'MyPortalCollection.RegisterPortal(...)'.
         /// </summary>
-        /// <param name="PColl"></param>
-        /// <param name="PID"></param>
+        /// <param name="PID">The portal ID (Range 0-255)</param>
         public Portal(byte PID)
         {
 
@@ -142,6 +153,10 @@ namespace Vaser
             }
         }
 
+        /// <summary>
+        /// Raises an event when a new packet has arrived.
+        /// </summary>
+        /// <param name="e">The packet data.</param>
         protected virtual void OnIncomingPacket(PacketEventArgs e)
         {
             //Debug.WriteLine("OnIncomingPacket");
@@ -255,6 +270,11 @@ namespace Vaser
             }
         }
 
+        /// <summary>
+        /// Forward a packet unread further to another client or server.
+        /// </summary>
+        /// <param name="lnk">The target link.</param>
+        /// <param name="packet">The unread packet.</param>
         public void DispatchContainer(Link lnk, Packet_Recv packet)
         {
             try
@@ -313,6 +333,11 @@ namespace Vaser
             }
         }
 
+        /// <summary>
+        /// Converts an bytearray to an string.
+        /// </summary>
+        /// <param name="ba">The data.</param>
+        /// <returns>A string.</returns>
         public static string ByteArrayToString(byte[] ba)
         {
             StringBuilder hex = new StringBuilder(ba.Length * 2);
@@ -322,5 +347,6 @@ namespace Vaser
         }
 
     }
+
 
 }

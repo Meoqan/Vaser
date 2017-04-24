@@ -19,6 +19,10 @@ namespace Vaser
         private Connection _Connect;
         internal volatile bool Valid = false;
         private volatile bool Teardown = false;
+
+        /// <summary>
+        /// Indicates if the Link was disposed.
+        /// </summary>
         public volatile bool Disposed;
         private object _DisposeLock = new object();
 
@@ -80,6 +84,9 @@ namespace Vaser
             }
         }
 
+        /// <summary>
+        /// Contains the reference of the server. Is null on the client side.
+        /// </summary>
         public VaserServer vServer
         {
             get;
@@ -135,6 +142,9 @@ namespace Vaser
             }
         }
 
+        /// <summary>
+        /// Indicates if the link uses kerberos.
+        /// </summary>
         public bool IsKerberos
         {
             get
@@ -147,6 +157,9 @@ namespace Vaser
             }
         }
 
+        /// <summary>
+        /// Indicates if the link is authenticated.
+        /// </summary>
         public bool IsAuthenticated
         {
             get
@@ -159,6 +172,9 @@ namespace Vaser
             }
         }
 
+        /// <summary>
+        /// Indicates if the link is encrypted.
+        /// </summary>
         public bool IsEncrypted
         {
             get
@@ -171,6 +187,9 @@ namespace Vaser
             }
         }
 
+        /// <summary>
+        /// Indicates if the link is full authenticated and trusted.
+        /// </summary>
         public bool IsMutuallyAuthenticated
         {
             get
@@ -183,6 +202,9 @@ namespace Vaser
             }
         }
 
+        /// <summary>
+        /// Indicates if the link is signed.
+        /// </summary>
         public bool IsSigned
         {
             get
@@ -195,6 +217,9 @@ namespace Vaser
             }
         }
 
+        /// <summary>
+        /// Indicates if the link is from a server.
+        /// </summary>
         public bool IsServer
         {
             get
@@ -234,6 +259,9 @@ namespace Vaser
             }
         }
 
+        /// <summary>
+        /// Indicates if the link is connected.
+        /// </summary>
         public bool IsConnected
         {
             get
@@ -254,6 +282,10 @@ namespace Vaser
             }
         }
 
+        /// <summary>
+        /// Do not create links of your own.
+        /// </summary>
+        /// <param name="Pcol">The PortalCollection.</param>
         public Link(PortalCollection Pcol)
         {
             lock (SendData_Lock)
@@ -290,7 +322,7 @@ namespace Vaser
 
             if (_Connect._IsAccepted == false)
             {
-                
+
                 _Connect.AcceptConnection();
 
                 lock (_Static_ThreadLock)
@@ -299,13 +331,21 @@ namespace Vaser
                 }
             }
         }
-        
+
+        /// <summary>
+        /// Raises an event if the link is disconnected.
+        /// </summary>
+        /// <param name="e">The link connection.</param>
         protected virtual void OnDisconnectingLink(LinkEventArgs e)
         {
 
             Disconnecting?.Invoke(this, e);
         }
 
+        /// <summary>
+        /// Raises an event if the Buffer of this link is empty. The 'OnEmptybuffer' parameter must set when a packet is send.
+        /// </summary>
+        /// <param name="e">The link connection.</param>
         protected internal virtual void OnEmptyBuffer(LinkEventArgs e)
         {
 
@@ -373,6 +413,6 @@ namespace Vaser
             }
             //Debug.WriteLine("Link.Dispose ended");
         }
-        
+
     }
 }

@@ -1,14 +1,17 @@
 ﻿using System.Security.Authentication;
-using Windows.Security.Cryptography.Certificates;
+using System.Security.Cryptography.X509Certificates;
 
 namespace Vaser.ConnectionSettings
 {
+    /// <summary>
+    /// This class provides security options for SSL encrypted client connections.
+    /// </summary>
     public class VaserSSLClient
     {
         /// <summary>
         /// Called by clients to authenticate the server and optionally the client in a client-server connection.
         /// </summary>
-        /// <param name="targetHost"></param>
+        /// <param name="targetHost">The name of the server that shares this SslStream.</param>
         public VaserSSLClient(string targetHost)
         {
             _targetHost = targetHost;
@@ -17,14 +20,14 @@ namespace Vaser.ConnectionSettings
         /// <summary>
         /// Called by clients to authenticate the server and optionally the client in a client-server connection. The authentication process uses the specified certificate collection and SSL protocol.
         /// </summary>
-        /// <param name="targetHost"></param>
-        /// <param name="clientCertificates"></param>
-        /// <param name="enabledSslProtocols"></param>
-        /// <param name="checkCertificateRevocation"></param>
-        public VaserSSLClient(string targetHost, Certificate clientCertificate, SslProtocols enabledSslProtocols, bool checkCertificateRevocation)
+        /// <param name="targetHost">The name of the server that will share this SslStream.</param>
+        /// <param name="clientCertificates">The X509CertificateCollection that contains client certificates.</param>
+        /// <param name="enabledSslProtocols">The SslProtocols value that represents the protocol used for authentication.</param>
+        /// <param name="checkCertificateRevocation">A Boolean value that specifies whether the certificate revocation list is checked during authentication.</param>
+        public VaserSSLClient(string targetHost, X509Certificate2Collection clientCertificates, SslProtocols enabledSslProtocols, bool checkCertificateRevocation)
         {
             _targetHost = targetHost;
-            _clientCertificate = clientCertificate;
+            _clientCertificates = clientCertificates;
             _enabledSslProtocols = enabledSslProtocols;
             _checkCertificateRevocation = checkCertificateRevocation;
         }
@@ -37,7 +40,7 @@ namespace Vaser.ConnectionSettings
         /// <summary>
         /// CLIENT
         /// </summary>
-        internal Certificate _clientCertificate = null;
+        internal X509Certificate2Collection _clientCertificates = null;
 
         /// <summary>
         /// CLIENT

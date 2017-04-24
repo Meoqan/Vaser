@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Security;
@@ -8,7 +7,7 @@ using System.Diagnostics;
 namespace Vaser
 {
     /// <summary>
-    /// This class is for inheritance your data packets.
+    /// The Container class is for inheritance your data packets.
     /// use: public class my_datapacket : Container
     /// </summary>
     public class Container
@@ -41,6 +40,9 @@ namespace Vaser
             internal writedata wd = null;
         }
 
+        /// <summary>
+        /// The Container class is for inheritance your data packets.
+        /// </summary>
         public Container()
         {
             //_ms = new MemoryStream();
@@ -54,7 +56,7 @@ namespace Vaser
         }
 
         /// <summary>
-        /// Free all container resources
+        /// Free all container resources.
         /// </summary>
         public void Dispose()
         {
@@ -126,17 +128,15 @@ namespace Vaser
         /// </summary>
         /// <param name="pak">the packet</param>
         /// <param name="portal">the portal</param>
+        /// <returns>Is true if the unpacking was successful.</returns>
         public bool UnpackContainer(Packet_Recv pak, Portal portal)
         {
             try
             {
                 if (pak.Data == null) return false;
 
-                
-
                 _DecodeMS.SetLength(0);
-                //_DecodeMSWriter.Write(pak.Data);
-                _DecodeMS.Write(pak.Data, 0, pak.Data.Length);
+                _DecodeMSWriter.Write(pak.Data);
                 _DecodeMS.Position = 0;
 
                 _ReadCounter = 0;
@@ -147,9 +147,10 @@ namespace Vaser
                     Rfield.rd(Rfield.FI, portal);
                 }
                 return true;
-            }catch(Exception e)
+            }
+            catch (Exception e)
             {
-                Debug.WriteLine("Vaser packet decode error: ClassID> " + pak.ClassID + " ContainerID> " + pak.ContainerID + " ObjectID> " + pak.ObjectID + " Packetsize> " + pak.Data.Length + " MEM L> " + _DecodeMS.Length + " P> " + _DecodeMS.Position +"  ERROR> "+ e.ToString());
+                Debug.WriteLine("Vaser packet decode error: ClassID> " + pak.ClassID + " ContainerID> " + pak.ContainerID + " ObjectID> " + pak.ObjectID + " Packetsize> " + pak.Data.Length + " MEM L> " + _DecodeMS.Length + " P> " + _DecodeMS.Position + "  ERROR> " + e.ToString());
                 return false;
             }
         }
@@ -401,7 +402,7 @@ namespace Vaser
         {
             field.SetValue(this, _DecodeMSReader.ReadSByte());
         }
-        
+
         void ReadInt32(FieldInfo field, Portal portal)
         {
             field.SetValue(this, _DecodeMSReader.ReadInt32());
@@ -411,174 +412,174 @@ namespace Vaser
         {
             field.SetValue(this, _DecodeMSReader.ReadUInt32());
         }
-        
+
         void ReadInt16(FieldInfo field, Portal portal)
         {
             field.SetValue(this, _DecodeMSReader.ReadInt16());
         }
-        
+
         void ReadUInt16(FieldInfo field, Portal portal)
         {
             field.SetValue(this, _DecodeMSReader.ReadUInt16());
         }
-        
+
         void ReadInt64(FieldInfo field, Portal portal)
         {
             field.SetValue(this, _DecodeMSReader.ReadInt64());
         }
-        
+
         void ReadUInt64(FieldInfo field, Portal portal)
         {
             field.SetValue(this, _DecodeMSReader.ReadUInt64());
         }
-        
+
         void ReadSingle(FieldInfo field, Portal portal)
         {
             field.SetValue(this, _DecodeMSReader.ReadSingle());
         }
-        
+
         void ReadDouble(FieldInfo field, Portal portal)
         {
             field.SetValue(this, _DecodeMSReader.ReadDouble());
         }
-        
+
         void ReadChar(FieldInfo field, Portal portal)
         {
             field.SetValue(this, _DecodeMSReader.ReadChar());
         }
-        
+
         void ReadBoolean(FieldInfo field, Portal portal)
         {
             field.SetValue(this, _DecodeMSReader.ReadBoolean());
         }
-        
+
         void ReadString(FieldInfo field, Portal portal)
         {
             field.SetValue(this, _DecodeMSReader.ReadString());
         }
-        
+
         void ReadDecimal(FieldInfo field, Portal portal)
         {
             field.SetValue(this, _DecodeMSReader.ReadDecimal());
         }
-        
+
         void ReadNetVector2(FieldInfo field, Portal portal)
         {
             field.SetValue(this, new NetVector2(_DecodeMSReader.ReadSingle(), _DecodeMSReader.ReadSingle()));
         }
-        
+
         void ReadByteA(FieldInfo field, Portal portal)
         {
             field.SetValue(this, _DecodeMSReader.ReadBytes(_DecodeMSReader.ReadInt32()));
         }
-        
+
         void ReadSByteA(FieldInfo field, Portal portal)
         {
             sbyte[] b = new sbyte[_DecodeMSReader.ReadInt32()];
             for (int x = 0; x < b.Length; x++) b[x] = _DecodeMSReader.ReadSByte();
             field.SetValue(this, b);
         }
-        
+
         void ReadInt32A(FieldInfo field, Portal portal)
         {
             int[] b = new int[_DecodeMSReader.ReadInt32()];
             for (int x = 0; x < b.Length; x++) b[x] = _DecodeMSReader.ReadInt32();
             field.SetValue(this, b);
         }
-        
+
         void ReadUInt32A(FieldInfo field, Portal portal)
         {
             uint[] b = new uint[_DecodeMSReader.ReadInt32()];
             for (int x = 0; x < b.Length; x++) b[x] = _DecodeMSReader.ReadUInt32();
             field.SetValue(this, b);
         }
-        
+
         void ReadInt16A(FieldInfo field, Portal portal)
         {
             short[] b = new short[_DecodeMSReader.ReadInt32()];
             for (int x = 0; x < b.Length; x++) b[x] = _DecodeMSReader.ReadInt16();
             field.SetValue(this, b);
         }
-        
+
         void ReadUInt16A(FieldInfo field, Portal portal)
         {
             ushort[] b = new ushort[_DecodeMSReader.ReadInt32()];
             for (int x = 0; x < b.Length; x++) b[x] = _DecodeMSReader.ReadUInt16();
             field.SetValue(this, b);
         }
-        
+
         void ReadInt64A(FieldInfo field, Portal portal)
         {
             long[] b = new long[_DecodeMSReader.ReadInt32()];
             for (int x = 0; x < b.Length; x++) b[x] = _DecodeMSReader.ReadInt64();
             field.SetValue(this, b);
         }
-        
+
         void ReadUInt64A(FieldInfo field, Portal portal)
         {
             ulong[] b = new ulong[_DecodeMSReader.ReadInt32()];
             for (int x = 0; x < b.Length; x++) b[x] = _DecodeMSReader.ReadUInt64();
             field.SetValue(this, b);
         }
-        
+
         void ReadSingleA(FieldInfo field, Portal portal)
         {
             float[] b = new float[_DecodeMSReader.ReadInt32()];
             for (int x = 0; x < b.Length; x++) b[x] = _DecodeMSReader.ReadSingle();
             field.SetValue(this, b);
         }
-        
+
         void ReadDoubleA(FieldInfo field, Portal portal)
         {
             double[] b = new double[_DecodeMSReader.ReadInt32()];
             for (int x = 0; x < b.Length; x++) b[x] = _DecodeMSReader.ReadDouble();
             field.SetValue(this, b);
         }
-        
+
         void ReadCharA(FieldInfo field, Portal portal)
         {
             char[] b = new char[_DecodeMSReader.ReadInt32()];
             for (int x = 0; x < b.Length; x++) b[x] = _DecodeMSReader.ReadChar();
             field.SetValue(this, b);
         }
-        
+
         void ReadBooleanA(FieldInfo field, Portal portal)
         {
             bool[] b = new bool[_DecodeMSReader.ReadInt32()];
             for (int x = 0; x < b.Length; x++) b[x] = _DecodeMSReader.ReadBoolean();
             field.SetValue(this, b);
         }
-        
+
         void ReadStringA(FieldInfo field, Portal portal)
         {
             string[] b = new string[_DecodeMSReader.ReadInt32()];
             for (int x = 0; x < b.Length; x++) b[x] = _DecodeMSReader.ReadString();
             field.SetValue(this, b);
         }
-        
+
         void ReadDecimalA(FieldInfo field, Portal portal)
         {
             decimal[] b = new decimal[_DecodeMSReader.ReadInt32()];
             for (int x = 0; x < b.Length; x++) b[x] = _DecodeMSReader.ReadDecimal();
             field.SetValue(this, b);
         }
-        
+
         void ReadNetVector2A(FieldInfo field, Portal portal)
         {
             int c = _DecodeMSReader.ReadInt32();
-            if (c*8 > (_ReadSize - _ReadCounter) || _ReadSize > Options.MaximumPacketSize) throw new Exception("Array is beond the packetlimits! Hacking attempt?");
+            if (c * 8 > (_ReadSize - _ReadCounter) || _ReadSize > Options.MaximumPacketSize) throw new Exception("Array is beond the packetlimits! Hacking attempt?");
             _ReadCounter += c * 8;
             NetVector2[] b = new NetVector2[c];
             for (int x = 0; x < b.Length; x++) b[x] = new NetVector2(_DecodeMSReader.ReadSingle(), _DecodeMSReader.ReadSingle());
             field.SetValue(this, b);
         }
 
-        
-
-        
 
 
-        
+
+
+
+
 
         void Writebyte(FieldInfo FI)
         {
@@ -757,7 +758,7 @@ namespace Vaser
             bool[] ia = (bool[])FI.GetValue(this);
             _bw.Write(ia.Length);
             foreach (bool i in ia) _bw.Write(i);
-            _SendPacket.Counter += 4 + (ia.Length );
+            _SendPacket.Counter += 4 + (ia.Length);
         }
 
         void Writestring(FieldInfo FI)

@@ -3,6 +3,9 @@ using System.Diagnostics;
 
 namespace Vaser.OON
 {
+    /// <summary>
+    /// The cRequest class provides a request response design pattern.
+    /// </summary>
     public class cRequest
     {
         internal cStatus Status = null;
@@ -27,18 +30,18 @@ namespace Vaser.OON
 
         internal void RemoveDisconnectedLink(Link _lnk)
         {
-            lock(StatusDictionary)
+            lock (StatusDictionary)
             {
-                foreach(cStatus s in StatusDictionary.Values)
+                foreach (cStatus s in StatusDictionary.Values)
                 {
-                    if(s.lnk == _lnk)
+                    if (s.lnk == _lnk)
                     {
                         RemList.Add(s.TransmissionID);
                         s.SetError("Disconnected");
                     }
                 }
 
-                foreach(uint i in RemList)
+                foreach (uint i in RemList)
                 {
                     StatusDictionary.Remove(i);
                 }
@@ -49,12 +52,6 @@ namespace Vaser.OON
 
         /// <summary>
         /// Process incoming packets from clients or server
-        /// Usage:
-        /// if (e.pak != null && mycon.UnpackContainer(e.pak, e.portal))
-        /// {
-        ///    Do stuff
-        ///    RequestResponse(mycon);
-        /// }else{ RequestResponse(null); } // send empty response
         /// </summary>
         /// <param name="p">Portal</param>
         /// <param name="e">PacketEventArgs</param>
@@ -76,13 +73,7 @@ namespace Vaser.OON
         }
 
         /// <summary>
-        /// Process incoming result packets from clients or server
-        /// Usage:
-        /// if (e.pak != null && mycon.UnpackContainer(e.pak, e.portal))
-        /// {
-        ///    Do stuff
-        ///    SetDone(myObject);
-        /// }else{ SetError("myError"); }
+        /// Process incoming result packets from clients or server.
         /// </summary>
         /// <param name="p">Portal</param>
         /// <param name="e">PacketEventArgs</param>
@@ -169,7 +160,7 @@ namespace Vaser.OON
         /// <summary>
         /// Sets the status to done and error, returns an error messsage
         /// </summary>
-        /// <param name="_Message"></param>
+        /// <param name="_Message">An custom error message.</param>
         public void SetError(string _Message)
         {
             if (Status != null)
@@ -205,6 +196,6 @@ namespace Vaser.OON
             //Console.WriteLine("SendPacket ContainerID: " + ContainerID + "  TransmissionID:" + _Status.TransmissionID);
             _Portal.SendContainer(_lnk, _Con, ContainerID, _Status.TransmissionID, CallEmptyBufferEvent);
         }
-        
+
     }
 }

@@ -18,7 +18,7 @@ namespace Vaser
         /// <summary>
         /// Creates a new pool of IDs
         /// </summary>
-        /// <param name="MaxIDs"></param>
+        /// <param name="MaxIDs">Maximum amount of IDs.</param>
         public IDPool(uint MaxIDs)
         {
             //if (MaxIDs < 0) throw new Exception("MaxIDs must be an positive integer");
@@ -35,19 +35,19 @@ namespace Vaser
         /// <summary>
         /// Returns a free ID from the pool
         /// </summary>
-        /// <returns>ID</returns>
+        /// <returns>A free ID</returns>
         public uint GetFreeID()
         {
-            lock(threadlock)
+            lock (threadlock)
             {
-                if(freeIDList.Count == 0) throw new Exception("free pool is empty");
+                if (freeIDList.Count == 0) throw new Exception("free pool is empty");
 
                 uint id = freeIDList[0];
                 freeIDList.Remove(id);
                 usedIDList.Add(id);
                 return id;
             }
-            
+
         }
 
         /// <summary>
@@ -58,7 +58,7 @@ namespace Vaser
         public uint RegisterFreeID(uint id)
         {
             //if (id < 0) throw new Exception("ID must be an positive integer");
-            
+
             lock (threadlock)
             {
                 if (freeIDList.Contains(id)) freeIDList.Remove(id);
@@ -78,7 +78,7 @@ namespace Vaser
 
             lock (threadlock)
             {
-                if(usedIDList.Contains(id)) usedIDList.Remove(id);
+                if (usedIDList.Contains(id)) usedIDList.Remove(id);
                 freeIDList.Add(id);
             }
         }
@@ -107,7 +107,7 @@ namespace Vaser
             {
                 uint _OldMaxIDs = _MaxIDs;
                 _MaxIDs += Quantity;
-                for (uint x = _OldMaxIDs+1; x <= Quantity; x++)
+                for (uint x = _OldMaxIDs + 1; x <= Quantity; x++)
                 {
                     freeIDList.Add(x);
                 }

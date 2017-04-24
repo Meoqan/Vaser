@@ -2,8 +2,15 @@
 
 namespace Vaser.OON
 {
+
+    /// <summary>
+    /// The cStatus class provides threadsave informations and the result of async requests.
+    /// </summary>
     public class cStatus
     {
+        /// <summary>
+        /// Contains the ID of the request.
+        /// </summary>
         public uint TransmissionID = 0;
 
         AutoResetEvent SendDiscoverEvent = new AutoResetEvent(false);
@@ -48,7 +55,7 @@ namespace Vaser.OON
         /// <summary>
         /// Wait for SetDone(...) or SetError(...)
         /// </summary>
-        /// <returns></returns>
+        /// <returns>Returns it self.</returns>
         public cStatus Wait()
         {
             if (Error == false && Done == false)
@@ -75,7 +82,7 @@ namespace Vaser.OON
         /// <summary>
         /// Sets the status to done and error, returns an error messsage
         /// </summary>
-        /// <param name="_Message"></param>
+        /// <param name="_Message">An custom error message.</param>
         public void SetError(string _Message)
         {
             Message = _Message;

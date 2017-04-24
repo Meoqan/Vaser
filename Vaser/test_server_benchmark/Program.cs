@@ -18,7 +18,7 @@ namespace test_server_benchmark
             public string test = "test text!";
 
             //also 1D arrays are posible
-            public int[] array = new int[1000];
+            //public int[] array = new int[1000];
         }
 
         //static Portal system = null;
@@ -39,13 +39,30 @@ namespace test_server_benchmark
 
         static Portal system = null;
         static uint object_counter = 0;
+        static Link[] linkarray = null;
 
         static void TimerCallback(object sender)
         {
             int x = pkt;
             pkt = 0;
+            lock (Livinglist_lock)
+            {
+                Console.WriteLine("Packets in 10 Sek: " + x +" Connected Links: "+Livinglist.Count);
 
-            Console.WriteLine("Packets in 10 Sek: "+ x);
+                if(linkarray != null)
+                {
+                    foreach(Link l in linkarray)
+                    {
+                        foreach(Link y in Livinglist)
+                        {
+                            if (l == y) throw new Exception("Fond stale link!");
+                        }
+                    }
+                }
+
+                linkarray = Livinglist.ToArray();
+            }
+            
         }
 
         static void Main(string[] args)

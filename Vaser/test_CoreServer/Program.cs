@@ -6,6 +6,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 using Vaser;
+using Vaser.ConnectionSettings;
 
 namespace test_CoreServer
 {
@@ -52,11 +53,17 @@ namespace test_CoreServer
             system = new Portal(100);
             PortalCollection PC = new PortalCollection();
             PC.RegisterPortal(system);
-
+            
             system.IncomingPacket += OnSystemPacket;
 
-            //Create a TestCert in CMD: makecert -sr LocalMachine -ss root -r -n "CN=localhost" -sky exchange -sk 123456
+
+
+            // ###########################################################
+            // Create a TestCert in CMD: makecert -sr LocalMachine -ss root -r -n "CN=localhost" -sky exchange -sk 123456
             // Do not use in Production | do not use localhost -> use your machinename!
+            // ###########################################################
+
+
 
             /*Console.WriteLine("Import Test Cert");
             //Import Test Cert
@@ -65,7 +72,7 @@ namespace test_CoreServer
             X509Store store = new X509Store(StoreName.Root, StoreLocation.LocalMachine);
             store.Open(OpenFlags.ReadOnly);
             var certificates = store.Certificates.Find(X509FindType.FindBySubjectDistinguishedName, "CN=localhost", false);
-            store.Dispose();
+            store.Close();
 
             if (certificates.Count == 0)
             {
@@ -85,14 +92,15 @@ namespace test_CoreServer
             // Get the value.
             string resultsFalse = cert.ToString(false);
             // Display the value to the console.
-            Console.WriteLine(resultsFalse);*/
-
+            Console.WriteLine(resultsFalse);
+            */
             //start the server
             Console.WriteLine("Creating server: IPAddress any, Port 3100, VaserMode ModeSSL");
             //VaserSSLServer ssl = new VaserSSLServer(certificates[0]);
+            VaserKerberosServer kerberos = new VaserKerberosServer();
             VaserServer Server1 = new VaserServer(System.Net.IPAddress.Any, 3100, PC);
             Server1.NewLink += OnNewLink;
-
+            Server1.DisconnectingLink += OnDisconnectingLink;
             Server1.Start();
 
             Console.WriteLine("");
@@ -169,6 +177,11 @@ namespace test_CoreServer
             {
                 Console.WriteLine(es.ToString());
             }
+        }
+
+        static void OnDisconnectingLink(object p, LinkEventArgs e)
+        {
+            Console.WriteLine("Disconnecting");
         }
 
         static TestContainer con3 = new TestContainer();
