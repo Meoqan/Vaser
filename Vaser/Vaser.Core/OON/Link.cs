@@ -9,8 +9,8 @@ namespace Vaser
     /// </summary>
     public class Link
     {
-        internal static object _Static_ThreadLock = new object();
-        private static List<Link> _LinkList = new List<Link>();
+        //internal static object _Static_ThreadLock = new object();
+        //private static List<Link> _LinkList = new List<Link>();
 
         //private object _Data_Lock = new object();
         private object _Connection_Lock = new object();
@@ -146,17 +146,6 @@ namespace Vaser
             internal set;
         }
 
-        /// <summary>
-        /// A list of all active links. Do not modify!
-        /// </summary>
-        public static List<Link> LinkList
-        {
-            get
-            {
-                return _LinkList;
-            }
-        }
-
         internal Connection Connect
         {
             get;
@@ -229,10 +218,6 @@ namespace Vaser
 
                 Connect.AcceptConnection();
 
-                lock (_Static_ThreadLock)
-                {
-                    _LinkList.Add(this);
-                }
             }
         }
 
@@ -276,45 +261,45 @@ namespace Vaser
                 {
                     Disposed = true;
                 }
-
-                Connect.Stop();
-
-                lock (_Static_ThreadLock)
-                {
-                    if (_LinkList.Contains(this)) _LinkList.Remove(this);
-                }
-
-                lock (SendData_Lock)
-                {
-                    for (int x = 0; x < SendDataPortalArray.Length; x++)
-                    {
-                        if (SendDataPortalArray[x] != null)
-                        {
-                            SendDataPortalArray[x].Clear();
-                            SendDataPortalArray[x] = null;
-                        }
-                    }
-
-                    for (int x = 0; x < SendDataPortalArrayOUTPUT.Length; x++)
-                    {
-                        SendDataPortalArrayOUTPUT[x] = null;
-                    }
-                }
-
-                Connect.Dispose();
-                //Connect = null;
-                Connect._PCollection.RemoveDisconectingLinkFromRequest(this);
-
-                if (!Teardown)
-                {
-
-                    Teardown = true;
-                    LinkEventArgs args = new LinkEventArgs();
-                    args.lnk = this;
-                    OnDisconnectingLink(args);
-                }
-
             }
+
+            Connect.Dispose();
+
+            /*lock (_Static_ThreadLock)
+            {
+                if (LinkList.Contains(this)) LinkList.Remove(this);
+            }*/
+
+            if (Connect.server != null) Connect.server.RemoveFromConnectionList(Connect);
+            lock (SendData_Lock)
+            {
+                for (int x = 0; x < SendDataPortalArray.Length; x++)
+                {
+                    if (SendDataPortalArray[x] != null)
+                    {
+                        SendDataPortalArray[x].Clear();
+                        SendDataPortalArray[x] = null;
+                    }
+                }
+
+                for (int x = 0; x < SendDataPortalArrayOUTPUT.Length; x++)
+                {
+                    SendDataPortalArrayOUTPUT[x] = null;
+                }
+            }
+
+            Connect._PCollection.RemoveDisconectingLinkFromRequest(this);
+
+            if (!Teardown)
+            {
+                Teardown = true;
+                LinkEventArgs args = new LinkEventArgs()
+                {
+                    lnk = this
+                };
+                OnDisconnectingLink(args);
+            }
+
             //Debug.WriteLine("Link.Dispose ended");
         }
 

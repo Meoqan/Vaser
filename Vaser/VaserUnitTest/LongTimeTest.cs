@@ -155,7 +155,7 @@ namespace VaserUnitTest
                     //Console.WriteLine("the packet has the container ID {0} and is for the object ID {1} ", pak.ContainerID, pak.ObjectID);
 
                     //unpack the packet, true if the decode was successful
-                    if (con2.UnpackContainer(e.pak, e.portal))
+                    if (con2.UnpackContainer(e.pak))
                     {
                         if (con2.ID < 0) throw new Exception("Decode error: " + con2.ID);
                         //if (con2.ID > 100) Console.WriteLine("Decode error: " + con2.ID);
@@ -318,7 +318,7 @@ namespace VaserUnitTest
         {
             //Debug.WriteLine("New Packet in Server");
             //unpack the packet, true if the decode was successful
-            if (con2.UnpackContainer(e.pak, e.portal))
+            if (con2.UnpackContainer(e.pak))
             {
                 //Console.WriteLine(con1.test);
                 //Console.WriteLine("Pong!  CounterID" + con2.ID + " Object:" + pak.ObjectID);

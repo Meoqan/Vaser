@@ -118,7 +118,7 @@ namespace test_client
                         online = false;
                     }
                 }
-                Thread.Sleep(200);
+                Thread.Sleep(2000);
 
                 //entfernen
                 //if (lnk1.IsConnected == false) online = false;
@@ -139,7 +139,7 @@ namespace test_client
         static void OnSystemPacket(object p, PacketEventArgs e)
         {
             //unpack the packet, true if the decode was successful
-            if (con1.UnpackContainer(e.pak, e.portal))
+            if (con1.UnpackContainer(e.pak))
             {
                 //Console.WriteLine("PACK");
                 e.portal.SendContainer(e.lnk, con1, 1, 1);

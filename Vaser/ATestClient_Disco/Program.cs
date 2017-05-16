@@ -6,10 +6,12 @@ using System.Threading.Tasks;
 using Vaser;
 using System.Threading;
 
-namespace test_client_benchmark
+namespace ATestClient_Disco
 {
     class Program
     {
+
+
         // Build your data container
         public class TestContainer : Container
         {
@@ -26,9 +28,19 @@ namespace test_client_benchmark
         static List<Link> Livinglist = new List<Link>();
 
 
+
         static void Main(string[] args)
         {
-          
+            ThreadPool.QueueUserWorkItem(Threads);
+
+
+            Console.ReadKey();
+            //}
+        }
+
+        static void Threads(object Context)
+        {
+
             //Client initalisieren
             Portal system = new Portal(100);
             PortalCollection PC = new PortalCollection();
@@ -42,53 +54,30 @@ namespace test_client_benchmark
             //while (online)
             //{
             int counter = 0;
-            while (true)
+
+            lock (Livinglist_lock)
             {
-                while (Livinglist.Count < 500)
+                counter++;
+                Vaser.ConnectionSettings.VaserKerberosClient k = new Vaser.ConnectionSettings.VaserKerberosClient();
+                Link lnk1 = VaserClient.ConnectClient("wswinprev", 3500, PC, k);
+                lnk1.Disconnecting += OnDisconnectingLink;
+                lnk1.AttachedID = (uint)counter;
+
+
+                if (lnk1 != null)
                 {
-                    lock (Livinglist_lock)
-                    {
-                        counter++;
-                        Vaser.ConnectionSettings.VaserKerberosClient k = new Vaser.ConnectionSettings.VaserKerberosClient();
-                        Link lnk1 = VaserClient.ConnectClient("localhost", 3100, PC,k);
-                        lnk1.Disconnecting += OnDisconnectingLink;
-                        lnk1.AttachedID = (uint)counter;
+                    Console.WriteLine("1: successfully established connection.");
 
-
-                        if (lnk1 != null)
-                        {
-                            //Console.WriteLine("1: successfully established connection.");
-
-                            Livinglist.Add(lnk1);
-                        }
-                    }
-                    lock (Livinglist_lock)
-                    {
-                        counter++;
-                        Vaser.ConnectionSettings.VaserKerberosClient k = new Vaser.ConnectionSettings.VaserKerberosClient();
-                        Link lnk2 = VaserClient.ConnectClient("localhost", 3101, PC,k);
-                        lnk2.Disconnecting += OnDisconnectingLink;
-                        lnk2.AttachedID = (uint)counter;
-
-                        if (lnk2 != null)
-                        {
-                            //Console.WriteLine("2: successfully established connection.");
-
-                            Livinglist.Add(lnk2);
-                        }
-                    }
-                    Thread.Sleep(50);
+                    Livinglist.Add(lnk1);
                 }
-                Thread.Sleep(1000);
             }
-            //Thread.Sleep(1);
-            Console.ReadKey();
-            //}
+
+            Thread.CurrentThread.Abort();
         }
 
         static void OnDisconnectingLink(object p, LinkEventArgs e)
         {
-            //Console.Write("CL OnDisconnectingLink: " + e.lnk.AttachedID);
+            Console.Write("CL OnDisconnectingLink: " + e.lnk.AttachedID);
             lock (Livinglist_lock)
             {
                 Livinglist.Remove(e.lnk);
@@ -112,9 +101,9 @@ namespace test_client_benchmark
                     {
                         if (con2.ID < 0) Console.WriteLine("Decode error: " + con2.ID);
                         //if (con2.ID > 100) Console.WriteLine("Decode error: " + con2.ID);
-                        if (con2.ID < 100)
+                        if (con2.ID < 10)
                         {
-                            //Console.WriteLine("Ping! " + counter + " CounterID" + con2.ID + " Object:" + e.pak.ObjectID);
+                            Console.WriteLine("Ping! " + counter + " CounterID" + con2.ID + " Object:" + e.pak.ObjectID);
 
                             con2.ID += 1;
                             e.portal.SendContainer(e.pak.link, con2, 1, e.pak.ObjectID);
@@ -123,7 +112,7 @@ namespace test_client_benchmark
                         {
                             counter++;
                             //Console.WriteLine("Disconnecting! " + counter + " CounterID" + con2.ID + " Object:" + e.pak.ObjectID);
-                            e.pak.link.Dispose();
+                            //e.pak.link.Dispose();
                         }
                     }
                     else

@@ -9,14 +9,14 @@ namespace Vaser
     /// </summary>
     public class Link
     {
-        internal static object _Static_ThreadLock = new object();
-        private static List<Link> _LinkList = new List<Link>();
+        //internal static object _Static_ThreadLock = new object();
+        //private static List<Link> _LinkList = new List<Link>();
 
         //private object _Data_Lock = new object();
         private object _Connection_Lock = new object();
         internal object SendData_Lock = new object();
 
-        private Connection _Connect;
+        //private Connection _Connect;
         internal volatile bool Valid = false;
         private volatile bool Teardown = false;
 
@@ -36,24 +36,6 @@ namespace Vaser
         /// </summary>
         internal Queue<Packet_Send>[] SendDataPortalArrayOUTPUT = null;
 
-
-        //private MemoryStream _ms = null;
-        //internal BinaryWriter bw = null;
-
-        private object _AttachedObject = null;
-        private object _vCDObject = null;
-        private uint _AttachedID = 0;
-
-        //Kerberos
-        private string _UserName = string.Empty;
-
-        private bool _IsKerberos = false;
-        private bool _IsAuthenticated = false;
-        private bool _IsEncrypted = false;
-        private bool _IsMutuallyAuthenticated = false;
-        private bool _IsSigned = false;
-        private bool _IsServer = false;
-
         /// <summary>
         /// EventHandler for disconnecting
         /// </summary>
@@ -70,18 +52,8 @@ namespace Vaser
         /// </summary>
         public object AttachedObject
         {
-            get
-            {
-
-                return _AttachedObject;
-
-            }
-            set
-            {
-
-                _AttachedObject = value;
-
-            }
+            get;
+            set;
         }
 
         /// <summary>
@@ -90,7 +62,7 @@ namespace Vaser
         public VaserServer vServer
         {
             get;
-            set;
+            internal set;
         }
 
         /// <summary>
@@ -98,18 +70,8 @@ namespace Vaser
         /// </summary>
         public object vCDObject
         {
-            get
-            {
-
-                return _vCDObject;
-
-            }
-            set
-            {
-
-                _vCDObject = value;
-
-            }
+            get;
+            set;
         }
 
         /// <summary>
@@ -117,14 +79,8 @@ namespace Vaser
         /// </summary>
         public uint AttachedID
         {
-            get
-            {
-                return _AttachedID;
-            }
-            set
-            {
-                _AttachedID = value;
-            }
+            get;
+            set;
         }
 
         /// <summary>
@@ -132,14 +88,8 @@ namespace Vaser
         /// </summary>
         public string UserName
         {
-            get
-            {
-                return _UserName;
-            }
-            internal set
-            {
-                _UserName = value;
-            }
+            get;
+            internal set;
         }
 
         /// <summary>
@@ -147,14 +97,8 @@ namespace Vaser
         /// </summary>
         public bool IsKerberos
         {
-            get
-            {
-                return _IsKerberos;
-            }
-            internal set
-            {
-                _IsKerberos = value;
-            }
+            get;
+            internal set;
         }
 
         /// <summary>
@@ -162,14 +106,8 @@ namespace Vaser
         /// </summary>
         public bool IsAuthenticated
         {
-            get
-            {
-                return _IsAuthenticated;
-            }
-            internal set
-            {
-                _IsAuthenticated = value;
-            }
+            get;
+            internal set;
         }
 
         /// <summary>
@@ -177,14 +115,8 @@ namespace Vaser
         /// </summary>
         public bool IsEncrypted
         {
-            get
-            {
-                return _IsEncrypted;
-            }
-            internal set
-            {
-                _IsEncrypted = value;
-            }
+            get;
+            internal set;
         }
 
         /// <summary>
@@ -192,14 +124,8 @@ namespace Vaser
         /// </summary>
         public bool IsMutuallyAuthenticated
         {
-            get
-            {
-                return _IsMutuallyAuthenticated;
-            }
-            internal set
-            {
-                _IsMutuallyAuthenticated = value;
-            }
+            get;
+            internal set;
         }
 
         /// <summary>
@@ -207,14 +133,8 @@ namespace Vaser
         /// </summary>
         public bool IsSigned
         {
-            get
-            {
-                return _IsSigned;
-            }
-            internal set
-            {
-                _IsSigned = value;
-            }
+            get;
+            internal set;
         }
 
         /// <summary>
@@ -222,41 +142,14 @@ namespace Vaser
         /// </summary>
         public bool IsServer
         {
-            get
-            {
-                return _IsServer;
-            }
-            internal set
-            {
-                _IsServer = value;
-            }
-        }
-
-        /// <summary>
-        /// A list of all active links. Do not modify!
-        /// </summary>
-        public static List<Link> LinkList
-        {
-            get
-            {
-                return _LinkList;
-            }
-            internal set
-            {
-                _LinkList = value;
-            }
+            get;
+            internal set;
         }
 
         internal Connection Connect
         {
-            get
-            {
-                return _Connect;
-            }
-            set
-            {
-                _Connect = value;
-            }
+            get;
+            set;
         }
 
         /// <summary>
@@ -266,7 +159,7 @@ namespace Vaser
         {
             get
             {
-                return _Connect.StreamIsConnected;
+                return Connect.StreamIsConnected;
             }
         }
 
@@ -278,7 +171,7 @@ namespace Vaser
         {
             get
             {
-                return _Connect.IPv4Address;
+                return Connect.IPv4Address;
             }
         }
 
@@ -320,15 +213,11 @@ namespace Vaser
         {
             Valid = true;
 
-            if (_Connect._IsAccepted == false)
+            if (Connect._IsAccepted == false)
             {
 
-                _Connect.AcceptConnection();
+                Connect.AcceptConnection();
 
-                lock (_Static_ThreadLock)
-                {
-                    _LinkList.Add(this);
-                }
             }
         }
 
@@ -372,45 +261,45 @@ namespace Vaser
                 {
                     Disposed = true;
                 }
-
-                Connect.Stop();
-
-                lock (_Static_ThreadLock)
-                {
-                    if (_LinkList.Contains(this)) _LinkList.Remove(this);
-                }
-
-                lock (SendData_Lock)
-                {
-                    for (int x = 0; x < SendDataPortalArray.Length; x++)
-                    {
-                        if (SendDataPortalArray[x] != null)
-                        {
-                            SendDataPortalArray[x].Clear();
-                            SendDataPortalArray[x] = null;
-                        }
-                    }
-
-                    for (int x = 0; x < SendDataPortalArrayOUTPUT.Length; x++)
-                    {
-                        SendDataPortalArrayOUTPUT[x] = null;
-                    }
-                }
-
-                Connect.Dispose();
-                //Connect = null;
-                Connect._PCollection.RemoveDisconectingLinkFromRequest(this);
-
-                if (!Teardown)
-                {
-
-                    Teardown = true;
-                    LinkEventArgs args = new LinkEventArgs();
-                    args.lnk = this;
-                    OnDisconnectingLink(args);
-                }
-
             }
+
+            Connect.Dispose();
+
+            /*lock (_Static_ThreadLock)
+            {
+                if (LinkList.Contains(this)) LinkList.Remove(this);
+            }*/
+
+            if (Connect.server != null) Connect.server.RemoveFromConnectionList(Connect);
+            lock (SendData_Lock)
+            {
+                for (int x = 0; x < SendDataPortalArray.Length; x++)
+                {
+                    if (SendDataPortalArray[x] != null)
+                    {
+                        SendDataPortalArray[x].Clear();
+                        SendDataPortalArray[x] = null;
+                    }
+                }
+
+                for (int x = 0; x < SendDataPortalArrayOUTPUT.Length; x++)
+                {
+                    SendDataPortalArrayOUTPUT[x] = null;
+                }
+            }
+
+            Connect._PCollection.RemoveDisconectingLinkFromRequest(this);
+
+            if (!Teardown)
+            {
+                Teardown = true;
+                LinkEventArgs args = new LinkEventArgs()
+                {
+                    lnk = this
+                };
+                OnDisconnectingLink(args);
+            }
+
             //Debug.WriteLine("Link.Dispose ended");
         }
 

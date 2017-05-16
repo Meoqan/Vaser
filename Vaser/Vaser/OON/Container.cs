@@ -12,7 +12,7 @@ namespace Vaser
     /// </summary>
     public class Container
     {
-        private Packet_Send _SendPacket = null;
+        private Packet_Send _SendPacket;
         private racefield[] _FieldList = null;
 
         private MemoryStream _ms = null;
@@ -24,9 +24,9 @@ namespace Vaser
         private long _pos1 = 0;
         private long _pos2 = 0;
 
-        internal delegate void readdata(FieldInfo field, Portal portal);
+        internal delegate void readdata(FieldInfo field);
         internal delegate void writedata(FieldInfo field);
-        internal class racefield
+        internal struct racefield
         {
             internal racefield(FieldInfo f, readdata r, writedata w)
             {
@@ -35,9 +35,9 @@ namespace Vaser
                 wd = w;
             }
 
-            internal FieldInfo FI = null;
-            internal readdata rd = null;
-            internal writedata wd = null;
+            internal FieldInfo FI;
+            internal readdata rd;
+            internal writedata wd;
         }
 
         /// <summary>
@@ -50,7 +50,7 @@ namespace Vaser
 
             _DecodeMS = new MemoryStream();
             _DecodeMSReader = new BinaryReader(_DecodeMS);
-            _DecodeMSWriter = new BinaryWriter(_DecodeMS);
+            //_DecodeMSWriter = new BinaryWriter(_DecodeMS);
 
             ScanObjects();
         }
@@ -89,9 +89,11 @@ namespace Vaser
                 {
                     if (member.IsPublic && !member.IsStatic && !member.IsInitOnly)
                     {
-                        racefield rf = BuildRaceField(myType.GetField(member.Name));
-                        if (rf != null) _FieldList[counter] = rf;
-                        counter++;
+                        if (BuildRaceField(myType.GetField(member.Name), out racefield rf))
+                        {
+                            _FieldList[counter] = rf;
+                            counter++;
+                        }
                     }
                 }
 
@@ -122,21 +124,20 @@ namespace Vaser
 
         internal MemoryStream _DecodeMS = null;
         internal BinaryReader _DecodeMSReader = null;
-        internal BinaryWriter _DecodeMSWriter = null;
+        //internal BinaryWriter _DecodeMSWriter = null;
         /// <summary>
         /// Unpacks a Packet_Recv data packet.
         /// </summary>
         /// <param name="pak">the packet</param>
-        /// <param name="portal">the portal</param>
         /// <returns>Is true if the unpacking was successful.</returns>
-        public bool UnpackContainer(Packet_Recv pak, Portal portal)
+        public bool UnpackContainer(Packet_Recv pak)
         {
             try
             {
                 if (pak.Data == null) return false;
 
                 _DecodeMS.SetLength(0);
-                _DecodeMSWriter.Write(pak.Data);
+                _DecodeMS.Write(pak.Data,0, pak.Data.Length);
                 _DecodeMS.Position = 0;
 
                 _ReadCounter = 0;
@@ -144,7 +145,7 @@ namespace Vaser
 
                 foreach (racefield Rfield in _FieldList)
                 {
-                    Rfield.rd(Rfield.FI, portal);
+                    Rfield.rd(Rfield.FI);
                 }
                 return true;
             }
@@ -155,191 +156,222 @@ namespace Vaser
             }
         }
 
-        internal racefield BuildRaceField(FieldInfo field)
+        internal bool BuildRaceField(FieldInfo field, out racefield race)
         {
             Type typ = field.FieldType;
 
             //Byte
             if (typ == tbyte)
             {
-                return new racefield(field, ReadByte, Writebyte);
+                race = new racefield(field, ReadByte, Writebyte);
+                return true;
             }
 
             //SByte
             if (typ == tsbyte)
             {
-                return new racefield(field, ReadSByte, Writesbyte);
+                race = new racefield(field, ReadSByte, Writesbyte);
+                return true;
             }
 
             //Int32
             if (typ == tint32)
             {
-                return new racefield(field, ReadInt32, Writeint);
+                race = new racefield(field, ReadInt32, Writeint);
+                return true;
             }
 
             //UInt32
             if (typ == tuint32)
             {
-                return new racefield(field, ReadUInt32, Writeuint);
+                race = new racefield(field, ReadUInt32, Writeuint);
+                return true;
             }
 
             //short
             if (typ == tshort)
             {
-                return new racefield(field, ReadInt16, Writeshort);
+                race = new racefield(field, ReadInt16, Writeshort);
+                return true;
             }
 
             //ushort
             if (typ == tushort)
             {
-                return new racefield(field, ReadUInt16, Writeushort);
+                race = new racefield(field, ReadUInt16, Writeushort);
+                return true;
             }
 
             //long
             if (typ == tlong)
             {
-                return new racefield(field, ReadInt64, Writelong);
+                race = new racefield(field, ReadInt64, Writelong);
+                return true;
             }
 
             //ulong
             if (typ == tulong)
             {
-                return new racefield(field, ReadUInt64, Writeulong);
+                race = new racefield(field, ReadUInt64, Writeulong);
+                return true;
             }
 
             //float
             if (typ == tfloat)
             {
-                return new racefield(field, ReadSingle, Writefloat);
+                race = new racefield(field, ReadSingle, Writefloat);
+                return true;
             }
 
             //double
             if (typ == tdouble)
             {
-                return new racefield(field, ReadDouble, Writedouble);
+                race = new racefield(field, ReadDouble, Writedouble);
+                return true;
             }
 
             //char
             if (typ == tchar)
             {
-                return new racefield(field, ReadChar, Writechar);
+                race = new racefield(field, ReadChar, Writechar);
+                return true;
             }
 
             //bool
             if (typ == tbool)
             {
-                return new racefield(field, ReadBoolean, Writebool);
+                race = new racefield(field, ReadBoolean, Writebool);
+                return true;
             }
 
             //string
             if (typ == tstring)
             {
-                return new racefield(field, ReadString, Writestring);
+                race = new racefield(field, ReadString, Writestring);
+                return true;
             }
 
             //decimal
             if (typ == tdecimal)
             {
-                return new racefield(field, ReadDecimal, Writedecimal);
+                race = new racefield(field, ReadDecimal, Writedecimal);
+                return true;
             }
 
             //NetVector2
             if (typ == tnetvector2)
             {
-                return new racefield(field, ReadNetVector2, WriteNetVector2);
+                race = new racefield(field, ReadNetVector2, WriteNetVector2);
+                return true;
             }
 
             //Byte
             if (typ == tbyteA)
             {
-                return new racefield(field, ReadByteA, WritebyteA);
+                race = new racefield(field, ReadByteA, WritebyteA);
+                return true;
             }
 
             //SByte
             if (typ == tsbyteA)
             {
-                return new racefield(field, ReadSByteA, WritesbyteA);
+                race = new racefield(field, ReadSByteA, WritesbyteA);
+                return true;
             }
 
             //Int32
             if (typ == tint32A)
             {
-                return new racefield(field, ReadInt32A, WriteintA);
+                race = new racefield(field, ReadInt32A, WriteintA);
+                return true;
             }
 
             //UInt32
             if (typ == tuint32A)
             {
-                return new racefield(field, ReadUInt32A, WriteuintA);
+                race = new racefield(field, ReadUInt32A, WriteuintA);
+                return true;
             }
 
             //short
             if (typ == tshortA)
             {
-                return new racefield(field, ReadInt16A, WriteshortA);
+                race = new racefield(field, ReadInt16A, WriteshortA);
+                return true;
             }
 
             //ushort
             if (typ == tushortA)
             {
-                return new racefield(field, ReadUInt16A, WriteushortA);
+                race = new racefield(field, ReadUInt16A, WriteushortA);
+                return true;
             }
 
             //long
             if (typ == tlongA)
             {
-                return new racefield(field, ReadInt64A, WritelongA);
+                race = new racefield(field, ReadInt64A, WritelongA);
+                return true;
             }
 
             //ulong
             if (typ == tulongA)
             {
-                return new racefield(field, ReadUInt64A, WriteulongA);
+                race = new racefield(field, ReadUInt64A, WriteulongA);
+                return true;
             }
 
             //float
             if (typ == tfloatA)
             {
-                return new racefield(field, ReadSingleA, WritefloatA);
+                race = new racefield(field, ReadSingleA, WritefloatA);
+                return true;
             }
 
             //double
             if (typ == tdoubleA)
             {
-                return new racefield(field, ReadDoubleA, WritedoubleA);
+                race = new racefield(field, ReadDoubleA, WritedoubleA);
+                return true;
             }
 
             //char
             if (typ == tcharA)
             {
-                return new racefield(field, ReadCharA, WritecharA);
+                race = new racefield(field, ReadCharA, WritecharA);
+                return true;
             }
 
             //bool
             if (typ == tboolA)
             {
-                return new racefield(field, ReadBooleanA, WriteboolA);
+                race = new racefield(field, ReadBooleanA, WriteboolA);
+                return true;
             }
 
             //string
             if (typ == tstringA)
             {
-                return new racefield(field, ReadStringA, WritestringA);
+                race = new racefield(field, ReadStringA, WritestringA);
+                return true;
             }
 
             //decimal
             if (typ == tdecimalA)
             {
-                return new racefield(field, ReadDecimalA, WritedecimalA);
+                race = new racefield(field, ReadDecimalA, WritedecimalA);
+                return true;
             }
 
             //NetVector2
             if (typ == tnetvector2A)
             {
-                return new racefield(field, ReadNetVector2A, WriteNetVector2A);
+                race = new racefield(field, ReadNetVector2A, WriteNetVector2A);
+                return true;
             }
 
-            return null;
+            race = new racefield(null, null, null);
+            return false;
 
         }
 
@@ -393,178 +425,178 @@ namespace Vaser
         private static readonly Type tnetvector2 = typeof(NetVector2);
         private static readonly Type tnetvector2A = typeof(NetVector2[]);
 
-        void ReadByte(FieldInfo field, Portal portal)
+        void ReadByte(FieldInfo field)
         {
             field.SetValue(this, _DecodeMSReader.ReadByte());
         }
 
-        void ReadSByte(FieldInfo field, Portal portal)
+        void ReadSByte(FieldInfo field)
         {
             field.SetValue(this, _DecodeMSReader.ReadSByte());
         }
 
-        void ReadInt32(FieldInfo field, Portal portal)
+        void ReadInt32(FieldInfo field)
         {
             field.SetValue(this, _DecodeMSReader.ReadInt32());
         }
 
-        void ReadUInt32(FieldInfo field, Portal portal)
+        void ReadUInt32(FieldInfo field)
         {
             field.SetValue(this, _DecodeMSReader.ReadUInt32());
         }
 
-        void ReadInt16(FieldInfo field, Portal portal)
+        void ReadInt16(FieldInfo field)
         {
             field.SetValue(this, _DecodeMSReader.ReadInt16());
         }
 
-        void ReadUInt16(FieldInfo field, Portal portal)
+        void ReadUInt16(FieldInfo field)
         {
             field.SetValue(this, _DecodeMSReader.ReadUInt16());
         }
 
-        void ReadInt64(FieldInfo field, Portal portal)
+        void ReadInt64(FieldInfo field)
         {
             field.SetValue(this, _DecodeMSReader.ReadInt64());
         }
 
-        void ReadUInt64(FieldInfo field, Portal portal)
+        void ReadUInt64(FieldInfo field)
         {
             field.SetValue(this, _DecodeMSReader.ReadUInt64());
         }
 
-        void ReadSingle(FieldInfo field, Portal portal)
+        void ReadSingle(FieldInfo field)
         {
             field.SetValue(this, _DecodeMSReader.ReadSingle());
         }
 
-        void ReadDouble(FieldInfo field, Portal portal)
+        void ReadDouble(FieldInfo field)
         {
             field.SetValue(this, _DecodeMSReader.ReadDouble());
         }
 
-        void ReadChar(FieldInfo field, Portal portal)
+        void ReadChar(FieldInfo field)
         {
             field.SetValue(this, _DecodeMSReader.ReadChar());
         }
 
-        void ReadBoolean(FieldInfo field, Portal portal)
+        void ReadBoolean(FieldInfo field)
         {
             field.SetValue(this, _DecodeMSReader.ReadBoolean());
         }
 
-        void ReadString(FieldInfo field, Portal portal)
+        void ReadString(FieldInfo field)
         {
             field.SetValue(this, _DecodeMSReader.ReadString());
         }
 
-        void ReadDecimal(FieldInfo field, Portal portal)
+        void ReadDecimal(FieldInfo field)
         {
             field.SetValue(this, _DecodeMSReader.ReadDecimal());
         }
 
-        void ReadNetVector2(FieldInfo field, Portal portal)
+        void ReadNetVector2(FieldInfo field)
         {
             field.SetValue(this, new NetVector2(_DecodeMSReader.ReadSingle(), _DecodeMSReader.ReadSingle()));
         }
 
-        void ReadByteA(FieldInfo field, Portal portal)
+        void ReadByteA(FieldInfo field)
         {
             field.SetValue(this, _DecodeMSReader.ReadBytes(_DecodeMSReader.ReadInt32()));
         }
 
-        void ReadSByteA(FieldInfo field, Portal portal)
+        void ReadSByteA(FieldInfo field)
         {
             sbyte[] b = new sbyte[_DecodeMSReader.ReadInt32()];
             for (int x = 0; x < b.Length; x++) b[x] = _DecodeMSReader.ReadSByte();
             field.SetValue(this, b);
         }
 
-        void ReadInt32A(FieldInfo field, Portal portal)
+        void ReadInt32A(FieldInfo field)
         {
             int[] b = new int[_DecodeMSReader.ReadInt32()];
             for (int x = 0; x < b.Length; x++) b[x] = _DecodeMSReader.ReadInt32();
             field.SetValue(this, b);
         }
 
-        void ReadUInt32A(FieldInfo field, Portal portal)
+        void ReadUInt32A(FieldInfo field)
         {
             uint[] b = new uint[_DecodeMSReader.ReadInt32()];
             for (int x = 0; x < b.Length; x++) b[x] = _DecodeMSReader.ReadUInt32();
             field.SetValue(this, b);
         }
 
-        void ReadInt16A(FieldInfo field, Portal portal)
+        void ReadInt16A(FieldInfo field)
         {
             short[] b = new short[_DecodeMSReader.ReadInt32()];
             for (int x = 0; x < b.Length; x++) b[x] = _DecodeMSReader.ReadInt16();
             field.SetValue(this, b);
         }
 
-        void ReadUInt16A(FieldInfo field, Portal portal)
+        void ReadUInt16A(FieldInfo field)
         {
             ushort[] b = new ushort[_DecodeMSReader.ReadInt32()];
             for (int x = 0; x < b.Length; x++) b[x] = _DecodeMSReader.ReadUInt16();
             field.SetValue(this, b);
         }
 
-        void ReadInt64A(FieldInfo field, Portal portal)
+        void ReadInt64A(FieldInfo field)
         {
             long[] b = new long[_DecodeMSReader.ReadInt32()];
             for (int x = 0; x < b.Length; x++) b[x] = _DecodeMSReader.ReadInt64();
             field.SetValue(this, b);
         }
 
-        void ReadUInt64A(FieldInfo field, Portal portal)
+        void ReadUInt64A(FieldInfo field)
         {
             ulong[] b = new ulong[_DecodeMSReader.ReadInt32()];
             for (int x = 0; x < b.Length; x++) b[x] = _DecodeMSReader.ReadUInt64();
             field.SetValue(this, b);
         }
 
-        void ReadSingleA(FieldInfo field, Portal portal)
+        void ReadSingleA(FieldInfo field)
         {
             float[] b = new float[_DecodeMSReader.ReadInt32()];
             for (int x = 0; x < b.Length; x++) b[x] = _DecodeMSReader.ReadSingle();
             field.SetValue(this, b);
         }
 
-        void ReadDoubleA(FieldInfo field, Portal portal)
+        void ReadDoubleA(FieldInfo field)
         {
             double[] b = new double[_DecodeMSReader.ReadInt32()];
             for (int x = 0; x < b.Length; x++) b[x] = _DecodeMSReader.ReadDouble();
             field.SetValue(this, b);
         }
 
-        void ReadCharA(FieldInfo field, Portal portal)
+        void ReadCharA(FieldInfo field)
         {
             char[] b = new char[_DecodeMSReader.ReadInt32()];
             for (int x = 0; x < b.Length; x++) b[x] = _DecodeMSReader.ReadChar();
             field.SetValue(this, b);
         }
 
-        void ReadBooleanA(FieldInfo field, Portal portal)
+        void ReadBooleanA(FieldInfo field)
         {
             bool[] b = new bool[_DecodeMSReader.ReadInt32()];
             for (int x = 0; x < b.Length; x++) b[x] = _DecodeMSReader.ReadBoolean();
             field.SetValue(this, b);
         }
 
-        void ReadStringA(FieldInfo field, Portal portal)
+        void ReadStringA(FieldInfo field)
         {
             string[] b = new string[_DecodeMSReader.ReadInt32()];
             for (int x = 0; x < b.Length; x++) b[x] = _DecodeMSReader.ReadString();
             field.SetValue(this, b);
         }
 
-        void ReadDecimalA(FieldInfo field, Portal portal)
+        void ReadDecimalA(FieldInfo field)
         {
             decimal[] b = new decimal[_DecodeMSReader.ReadInt32()];
             for (int x = 0; x < b.Length; x++) b[x] = _DecodeMSReader.ReadDecimal();
             field.SetValue(this, b);
         }
 
-        void ReadNetVector2A(FieldInfo field, Portal portal)
+        void ReadNetVector2A(FieldInfo field)
         {
             int c = _DecodeMSReader.ReadInt32();
             if (c * 8 > (_ReadSize - _ReadCounter) || _ReadSize > Options.MaximumPacketSize) throw new Exception("Array is beond the packetlimits! Hacking attempt?");

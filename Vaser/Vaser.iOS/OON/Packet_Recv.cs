@@ -5,7 +5,7 @@ namespace Vaser
     /// <summary>
     /// This class holds your incoming data packet.
     /// </summary>
-    public class Packet_Recv
+    public struct Packet_Recv
     {
         /// <summary>
         /// The related link for this packet.
@@ -14,16 +14,16 @@ namespace Vaser
         /// <summary>
         /// The object ID
         /// </summary>
-        public uint ObjectID = 0;
+        public uint ObjectID;
 
         /// <summary>
         /// The container ID
         /// </summary>
-        public ushort ContainerID = 0;
+        public ushort ContainerID;
 
-        internal byte ClassID = 0;
+        internal byte ClassID;
 
-        internal byte[] Data = null;
+        internal byte[] Data;
 
 
         //internal long StreamPosition = -1;
@@ -32,15 +32,13 @@ namespace Vaser
         internal Packet_Recv(Link ilink, BinaryReader data)
         {
             link = ilink;
-
-            extractIDs(data);
-        }
-
-        private void extractIDs(BinaryReader data)
-        {
+            ObjectID = 0;
+            ContainerID = 0;
+            ClassID = 0;
             ClassID = data.ReadByte(); //Get Class ID Len: 1 B
             ObjectID = data.ReadUInt32(); //Get Object ID Len: 4 B
             ContainerID = data.ReadUInt16(); //Get Container ID Len: 2 B
+            Data = null;
         }
     }
 }

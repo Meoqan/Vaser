@@ -15,16 +15,21 @@ namespace Vaser
     internal class Connection
     {
         private object _DisposeLock = new object();
-        public volatile bool ThreadIsRunning = true;
-        public volatile bool StreamIsConnected = true;
         public volatile bool IsServer = false;
+
         private NetworkStream _ConnectionStream;
         private NegotiateStream _AuthStream;
         private SslStream _sslStream;
         //private NetworkStream _NotEncryptedStream;
 
+
+        public bool StreamIsConnected
+        {
+            get; set;
+        }
+
         private Socket _SocketTCPClient;
-        public volatile bool Disposed;
+        public bool Disposed;
         public volatile bool BootupDone = false;
 
         internal delegate void QueueSendHidden();
@@ -40,30 +45,20 @@ namespace Vaser
 
         //private Link _link;
         //private IPAddress _IPv4Address;
-
-        private object _WorkAtStream_Lock = new object();
-
+        
         public static volatile bool IsInOnEmptyBufferQueue;
         private static object _CallOnEmptyBuffer_Lock = new object();
         private static Queue<LinkEventArgs> _CallOnEmptyBufferQueue = new Queue<LinkEventArgs>();
-
-        private object _ReadStream_Lock = new object();
-        private MemoryStream _rms1 = null;
-        private BinaryWriter _rbw1 = null;
-        private BinaryReader _rbr1 = null;
-
         private MemoryStream _rms2 = null;
-        private BinaryWriter _rbw2 = null;
         private BinaryReader _rbr2 = null;
 
         private VaserOptions _Mode = null;
+
         private VaserSSLServer _vSSLS = null;
         private VaserKerberosServer _vKerberosS = null;
         private VaserSSLClient _vSSLC = null;
         private VaserKerberosClient _vKerberosC = null;
 
-        private object _IsInQueue_Lock = new object();
-        private bool IsInQueue = false;
         private bool IsInSendQueue = false;
         
         private Timer _BootUpTimer = null;
@@ -72,16 +67,13 @@ namespace Vaser
         private byte[] _timeoutdata = BitConverter.GetBytes((int)(-1));
         private Packet_Send _timeoutpacket = new Packet_Send(BitConverter.GetBytes((int)(-1)), false);
 
-        Packet_Send byteData = null;
+        Packet_Send byteData;
 
         bool SendFound = false;
         bool _CallEmptyBuffer = false;
-        private object _SendDisposelock = new object();
-        private object _ReceiveDisposelock = new object();
 
         private int mode = 0;
         private int size = 0;
-        private bool action1 = false;
         private bool action2 = false;
 
         internal volatile bool _IsAccepted = false;
@@ -116,18 +108,13 @@ namespace Vaser
         public Connection(Socket client, bool _IsServer, VaserOptions Mode, PortalCollection PColl, VaserKerberosServer KerberosS, VaserSSLServer SSLS, VaserKerberosClient KerberosC, VaserSSLClient SSLC, VaserServer srv = null)
         {
             IsServer = _IsServer;
+            StreamIsConnected = true;
 
-            lock (_ReadStream_Lock)
-            {
-                _rms1 = new MemoryStream();
-                _rbw1 = new BinaryWriter(_rms1);
-                _rbr1 = new BinaryReader(_rms1);
 
-                _rms2 = new MemoryStream();
-                _rbw2 = new BinaryWriter(_rms2);
-                _rbr2 = new BinaryReader(_rms2);
+            _rms2 = new MemoryStream();
+            _rbr2 = new BinaryReader(_rms2);
 
-            }
+
 
             _Mode = Mode;
             _PCollection = PColl;
@@ -168,33 +155,32 @@ namespace Vaser
                 _BootUpTimes = 0;
                 _BootUpTimer.Dispose();
 
-                lock (_ReceiveDisposelock)
+                try
                 {
-                    lock (_SendDisposelock)
+
+                    Stop();
+
+                    _rbr2.Dispose();
+                    _rbr2 = null;
+                    _rms2.Dispose();
+                    _buff = null;
+
+                    // encryption
+                    /*if (_Mode == VaserOptions.ModeKerberos && _AuthStream != null)
                     {
-                        try
-                        {
-                            _SocketTCPClient.Dispose();
-
-                            if(_ConnectionStream != null) _ConnectionStream.Dispose();
-
-                            // encryption
-                            if (_Mode == VaserOptions.ModeKerberos && _AuthStream != null)
-                            {
-                                _AuthStream.Dispose();
-                            }
-
-                            if (_Mode == VaserOptions.ModeSSL && _sslStream != null)
-                            {
-                                _sslStream.Dispose();
-                            }
-
-                        }
-                        catch
-                        {
-
-                        }
+                        _AuthStream.Close();
                     }
+
+                    if (_Mode == VaserOptions.ModeSSL && _sslStream != null)
+                    {
+                        _sslStream.Close();
+                    }
+
+                    _SocketTCPClient.Close();*/
+                }
+                catch
+                {
+
                 }
             }
         }
@@ -383,7 +369,7 @@ namespace Vaser
                 Debug.WriteLine("Authentication failed. " + e.ToString());
                 _BootUpTimer.Dispose();
 
-                Dispose();
+                Stop();
                 return;
             }
             catch (Exception e)
@@ -391,7 +377,7 @@ namespace Vaser
                 Debug.WriteLine("Authentication failed. " + e.ToString());
                 _BootUpTimer.Dispose();
 
-                Dispose();
+                Stop();
                 return;
             }
             // encryption END
@@ -409,21 +395,7 @@ namespace Vaser
                 if (_Mode == VaserOptions.ModeSSL) ThreadPool.QueueUserWorkItem(ReceiveSSL);
             }
         }
-
         
-
-        internal void QueueStreamDecrypt()
-        {
-            lock (_IsInQueue_Lock)
-            {
-                if (IsInQueue == false)
-                {
-                    IsInQueue = true;
-                    ThreadPool.QueueUserWorkItem(ThreadPoolCallback);
-                }
-            }
-        }
-
         internal void QueueSendNotEncrypted()
         {
             lock (link.SendData_Lock)
@@ -495,172 +467,23 @@ namespace Vaser
                 }
             }
         }
-
-        // Wrapper method for use with thread pool.
-        internal void ThreadPoolCallback(Object threadContext)
-        {
-
-            StreamDecrypt();
-        }
-
+        
 
         /// <summary>
         /// Stops the connection
         /// </summary>
         public void Stop()
         {
-            ThreadIsRunning = false;
-            Dispose();
-        }
-
-
-
-        private void StreamDecrypt()
-        {
-
-            try
-            {
-                lock (_WorkAtStream_Lock)
-                {
-
-
-                    if (_rms1 == null)
-                    {
-                        return;
-                    }
-
-                    action1 = true;
-
-
-                    while (action1)
-                    {
-                        action1 = false;
-                        //_ReadStream_Lock.Wait();
-                        lock (_ReadStream_Lock)
-                        {
-                            lock (_IsInQueue_Lock)
-                            {
-                                if (_rms1.Length > 0)
-                                {
-                                    action1 = true;
-                                }
-                                else
-                                {
-                                    IsInQueue = false;
-                                }
-                            }
-                            //Debug.WriteLine("Decrypting: _rms1.Length = " + _rms1.Length);
-                            _rbw2.Write(_rms1.ToArray());
-
-                            _rms1.SetLength(0);
-                            _rms1.Flush();
-                            _rbw1.Flush();
-
-
-                        }
-                        //_ReadStream_Lock.Release();
-                        _rms2.Position = 0;
-
-                        action2 = true;
-                        while (action2)
-                        {
-                            action2 = false;
-                            switch (mode)
-                            {
-                                case 0: // get the packetsize
-                                    if ((_rms2.Length - _rms2.Position) >= 4)
-                                    {
-
-                                        size = _rbr2.ReadInt32();
-
-                                        mode = 1;
-                                        action2 = true;
-
-                                        // recive keep alive packet
-                                        if (size == -1)
-                                        {
-                                            mode = 0;
-                                            action2 = true;
-                                        }
-                                        else
-                                        {
-
-                                            // if the Packetsize is beond the limits, terminate the connection. maybe a Hacking attempt?
-                                            if (size > Options.MaximumPacketSize || size < Options.PacketHeadSize)
-                                            {
-                                                //Debug.WriteLine("The Size was: " + size + " > the Packetsize is beond the limits, terminate the connection. maybe a Hacking attempt?");
-                                                this.Stop();
-                                                mode = 100;
-                                                break;
-                                            }
-                                        }
-                                    }
-                                    break;
-                                case 1: // recive the packet und give it to the class
-                                    if ((_rms2.Length - _rms2.Position) >= size)
-                                    {
-
-                                        if (size - Options.PacketHeadSize == 0)
-                                        {
-                                            _PCollection.GivePacketToClass(new Packet_Recv(link, _rbr2));
-                                        }
-                                        else
-                                        {
-                                            Packet_Recv Recv = new Packet_Recv(link, _rbr2);
-                                            Recv.Data = _rbr2.ReadBytes(size - Options.PacketHeadSize);
-                                            _PCollection.GivePacketToClass(Recv);
-                                        }
-
-                                        mode = 0;
-
-                                        action2 = true;
-                                    }
-                                    break;
-                            }
-                        }
-
-
-                        byte[] lastbytes = _rbr2.ReadBytes((int)(_rms2.Length - _rms2.Position));
-
-                        if (_rms2.Length > 1000000)
-                        {
-                            _rms2.Dispose();
-                            _rbr2.Dispose();
-                            _rbw2.Dispose();
-                            _rms2 = new MemoryStream();
-                            _rbr2 = new BinaryReader(_rms2);
-                            _rbw2 = new BinaryWriter(_rms2);
-                        }
-                        else
-                        {
-                            _rms2.SetLength(0);
-                            _rms2.Flush();
-                            _rbw2.Flush();
-                        }
-                        _rbw2.Write(lastbytes);
-
-                    }
-
-                }
-
-            }
-            catch (Exception e)
-            {
-
-
-                Debug.WriteLine("Connection.StreamDecrypt()  >" + e.ToString());
-                //Dispose();
-                ThreadIsRunning = false;
-            }
+            link.Dispose();
         }
 
 
 
         internal void Dispose()
         {
+
             lock (_DisposeLock)
             {
-
                 if (Disposed)
                 {
                     return;
@@ -669,100 +492,11 @@ namespace Vaser
                 {
                     Disposed = true;
                 }
-                StreamIsConnected = false;
-                ThreadIsRunning = false;
             }
-
-            if (server != null) server.RemoveFromConnectionList(this);
-            
-            lock (_ReceiveDisposelock)
-            {
-                lock (_SendDisposelock)
-                {
-                    if (_SocketTCPClient != null && _SocketTCPClient.Connected)
-                    {
-                        try
-                        {
-                            _SocketTCPClient.Shutdown(SocketShutdown.Both);
-                        }
-                        catch
-                        {
-
-                        }
-
-                    }
-
-                    if (_AuthStream != null) _AuthStream.Dispose();
-                    if (_sslStream != null) _sslStream.Dispose();
-                    if (_ConnectionStream != null) _ConnectionStream.Dispose();
-                }
-            }
-
-            
-
-            lock (_WorkAtStream_Lock)
-            {
-
-                lock (_ReadStream_Lock)
-                {
-                    try
-                    {
-
-                        _rbr1.Dispose();
-                        _rbr2.Dispose();
-
-                        _rbr1 = null;
-                        _rbr2 = null;
-                    }
-                    catch (Exception e)
-                    {
-                        Debug.WriteLine("Connection.Dispose()  > " + e.ToString());
-                    }
-
-                    try
-                    {
-                        _rbw1.Dispose();
-                        _rbw2.Dispose();
-
-                        _rbw1 = null;
-                        _rbw2 = null;
-                    }
-                    catch (Exception e)
-                    {
-                        Debug.WriteLine("Connection.Dispose()  > " + e.ToString());
-                    }
-
-                    try
-                    {
-                        _rms1.Dispose();
-                        _rms2.Dispose();
-
-                        _rms1 = null;
-                        _rms2 = null;
-
-                        _buff = null;
-                    }
-                    catch (Exception e)
-                    {
-                        Debug.WriteLine("Connection.Dispose()  > " + e.ToString());
-                    }
-
-
-                }
-            }
-
-            
-
-            if (link != null)
-            {
-                link.Dispose();
-                //link = null;
-            }
-
-            Debug.WriteLine("Link.Dispose finished");
-
+            StreamIsConnected = false;
+            if (_SocketTCPClient.Connected) _SocketTCPClient.Shutdown(SocketShutdown.Send);
+            //if (_SocketTCPClient.Connected) _SocketTCPClient.Disconnect(true);
         }
-
 
         private ArraySegment<byte> _SAbuff = new ArraySegment<byte>(new byte[65007]);
         internal async void ReceiveNotEncrypted(object state)
@@ -772,9 +506,15 @@ namespace Vaser
                 while (true)
                 {
                     bytesRead = await _SocketTCPClient.ReceiveAsync(_SAbuff, SocketFlags.None);
-                    if (bytesRead < 1)
+                    if (bytesRead == 0)
                     {
-                        Dispose();
+                        Stop();
+                        
+                        _rbr2.Dispose();
+                        _rbr2 = null;
+                        _rms2.Dispose();
+                        _buff = null;
+
                         return;
                     }
                     _buff = _SAbuff.Array;
@@ -784,7 +524,12 @@ namespace Vaser
             catch (Exception e)
             {
                 StreamIsConnected = false;
-                Dispose();
+                Stop();
+
+                _rbr2.Dispose();
+                _rbr2 = null;
+                _rms2.Dispose();
+                _buff = null;
 
                 Debug.WriteLine("Connection.Receive()  >" + e.ToString());
                 //if (e.InnerException != null) Console.WriteLine("Inner exception: {0}", e.InnerException);
@@ -798,9 +543,15 @@ namespace Vaser
                 while (true)
                 {
                     bytesRead = await _sslStream.ReadAsync(_buff, 0, _buff.Length);
-                    if (bytesRead < 1)
+                    if (bytesRead == 0)
                     {
-                        Dispose();
+                        Stop();
+
+                        _rbr2.Dispose();
+                        _rbr2 = null;
+                        _rms2.Dispose();
+                        _buff = null;
+
                         return;
                     }
                     WritePackets();
@@ -809,7 +560,12 @@ namespace Vaser
             catch (Exception e)
             {
                 StreamIsConnected = false;
-                Dispose();
+                Stop();
+
+                _rbr2.Dispose();
+                _rbr2 = null;
+                _rms2.Dispose();
+                _buff = null;
 
                 Debug.WriteLine("Connection.Receive()  >" + e.ToString());
                 //if (e.InnerException != null) Console.WriteLine("Inner exception: {0}", e.InnerException);
@@ -825,9 +581,15 @@ namespace Vaser
                 {
                     
                     bytesRead = await _AuthStream.ReadAsync(_buff, 0, _buff.Length);
-                    if (bytesRead < 1)
+                    if (bytesRead == 0)
                     {
-                        Dispose();
+                        Stop();
+
+                        _rbr2.Dispose();
+                        _rbr2 = null;
+                        _rms2.Dispose();
+                        _buff = null;
+
                         return;
                     }
                     WritePackets();
@@ -836,26 +598,110 @@ namespace Vaser
             catch (Exception e)
             {
                 StreamIsConnected = false;
-                Dispose();
+                Stop();
+
+                _rbr2.Dispose();
+                _rbr2 = null;
+                _rms2.Dispose();
+                _buff = null;
 
                 Debug.WriteLine("Connection.Receive()  >" + e.ToString());
                 //if (e.InnerException != null) Console.WriteLine("Inner exception: {0}", e.InnerException);
             }
         }
 
+        private List<Packet_Recv> inlist = new List<Packet_Recv>();
         private void WritePackets()
         {
-            if (bytesRead > 0)
-            {
-                lock (_ReadStream_Lock)
-                {
-                    if (_rbw1 != null)
-                    {
-                        _rbw1.Write(_buff, 0, bytesRead);
+            //Debug.WriteLine("Write in _rms2 " + bytesRead + "  _rms2.Position " + _rms2.Position);
+            _rms2.Write(_buff, 0, bytesRead);
+            //Debug.WriteLine("New _rms2.Position " + _rms2.Position);
+            _rms2.Position = 0;
 
-                        QueueStreamDecrypt();
-                    }
+            action2 = true;
+            while (action2)
+            {
+                action2 = false;
+                switch (mode)
+                {
+                    case 0: // get the packetsize
+                        if ((_rms2.Length - _rms2.Position) >= 4)
+                        {
+
+                            size = _rbr2.ReadInt32();
+
+                            mode = 1;
+                            action2 = true;
+
+                            // recive keep alive packet
+                            if (size == -1)
+                            {
+                                mode = 0;
+                                action2 = true;
+                            }
+                            else
+                            {
+                                //Debug.WriteLine("size " + size );
+                                // if the Packetsize is beond the limits, terminate the connection. maybe a Hacking attempt?
+                                if (size > Options.MaximumPacketSize || size < Options.PacketHeadSize)
+                                {
+                                    //Debug.WriteLine("The Size was: " + size + " > the Packetsize is beond the limits, terminate the connection. maybe a Hacking attempt?");
+                                    this.Stop();
+                                    mode = 100;
+                                    break;
+                                }
+                            }
+                        }
+                        break;
+                    case 1: // recive the packet und give it to the class
+                        if ((_rms2.Length - _rms2.Position) >= size)
+                        {
+
+                            if (size == Options.PacketHeadSize)
+                            {
+                                inlist.Add(new Packet_Recv(link, _rbr2));
+                                //_PCollection.GivePacketToClass(new Packet_Recv(link, _rbr2));
+                            }
+                            else
+                            {
+                                Packet_Recv Recv = new Packet_Recv(link, _rbr2)
+                                {
+                                    Data = _rbr2.ReadBytes(size - Options.PacketHeadSize)
+                                };
+                                //_PCollection.GivePacketToClass(Recv);
+                                inlist.Add(Recv);
+                            }
+
+                            mode = 0;
+
+                            action2 = true;
+                        }
+                        break;
                 }
+            }
+
+            _PCollection.GivePacketToClass(inlist);
+            inlist.Clear();
+            //Debug.WriteLine("last _rms2.Length " + _rms2.Length+ "  _rms2.Position " + _rms2.Position);
+            if (_rms2.Length == _rms2.Position)
+            {
+                _rms2.SetLength(0);
+                //_rms2.Flush();
+                _rms2.Position = 0;
+            }
+            else
+            {
+                byte[] lastbytes = new byte[(int)(_rms2.Length - _rms2.Position)];
+                //byte[] lastbytes = _rbr2.ReadBytes((int)(_rms2.Length - _rms2.Position));
+                _rms2.Read(lastbytes, 0, (int)(_rms2.Length - _rms2.Position));
+
+                _rms2.SetLength(0);
+                //_rms2.Flush();
+                _rms2.Position = 0;
+
+                _rms2.Write(lastbytes, 0, lastbytes.Length);
+                _rms2.Position = lastbytes.Length;
+
             }
         }
 
@@ -868,7 +714,6 @@ namespace Vaser
         // *********************************************************
         internal async void SendNotEncrypted(Object threadContext)
         {
-            if (!BootupDone) throw new Exception("Data was send b4 connection was booted.");
             try
             {
 
@@ -890,7 +735,7 @@ namespace Vaser
             catch (Exception e)
             {
                 StreamIsConnected = false;
-                Dispose();
+                Stop();
 
                 Debug.WriteLine("Connection.Send()  >" + e.ToString());
                 //if (e.InnerException != null) Console.WriteLine("Inner exception: {0}", e.InnerException);
@@ -899,7 +744,6 @@ namespace Vaser
 
         internal async void SendKerberos(Object threadContext)
         {
-            if (!BootupDone) throw new Exception("Data was send b4 connection was booted.");
             try
             {
 
@@ -909,7 +753,7 @@ namespace Vaser
 
                     if (!StreamIsConnected) return;
 
-                    if (_AuthStream != null && _AuthStream.CanWrite && _SocketTCPClient.Connected)
+                    if (_SocketTCPClient.Connected)
                     {
                         await _AuthStream.WriteAsync(byteData._SendData, 0, byteData._SendData.Length);
                     }
@@ -919,7 +763,7 @@ namespace Vaser
             catch (Exception e)
             {
                 StreamIsConnected = false;
-                Dispose();
+                Stop();
 
                 Debug.WriteLine("Connection.Send()  >" + e.ToString());
                 //if (e.InnerException != null) Console.WriteLine("Inner exception: {0}", e.InnerException);
@@ -928,7 +772,6 @@ namespace Vaser
 
         internal async void SendSSL(Object threadContext)
         {
-            if (!BootupDone) throw new Exception("Data was send b4 connection was booted.");
             try
             {
 
@@ -938,7 +781,7 @@ namespace Vaser
 
                     if (!StreamIsConnected) return;
 
-                    if (_sslStream != null && _sslStream.CanWrite && _SocketTCPClient.Connected)
+                    if (_SocketTCPClient.Connected)
                     {
                         await _sslStream.WriteAsync(byteData._SendData, 0, byteData._SendData.Length);
                     }
@@ -949,7 +792,7 @@ namespace Vaser
             catch (Exception e)
             {
                 StreamIsConnected = false;
-                Dispose();
+                Stop();
 
                 Debug.WriteLine("Connection.Send()  >" + e.ToString());
                 //if (e.InnerException != null) Console.WriteLine("Inner exception: {0}", e.InnerException);
@@ -960,54 +803,50 @@ namespace Vaser
         private bool GetPackets()
         {
             SendFound = false;
+
             lock (link.SendData_Lock)
             {
+                if (link.SendDataPortalArrayOUTPUT[0] == null)
+                {
+                    return true;
+                }
                 for (int x = 0; x < link.SendDataPortalArrayOUTPUT.Length; x++)
                 {
                     if (link.SendDataPortalArrayOUTPUT[x].Count > 0)
                     {
-
-                        //Debug.WriteLine("data");
                         byteData = link.SendDataPortalArrayOUTPUT[x].Dequeue();
                         SendFound = true;
                         if (byteData._CallEmpybuffer) _CallEmptyBuffer = true;
-
-                        //Debug.WriteLine("Sending.... Lenght: " + byteData._SendData.Length);
                         break;
                     }
                 }
-
-
                 if (!SendFound)
                 {
                     IsInSendQueue = false;
-
                     //Debug.WriteLine("no data");
                     //if _CallEmptyBuffer is set, trigger an event to get more data
                     if (_CallEmptyBuffer)
                     {
                         _CallEmptyBuffer = false;
 
-                        LinkEventArgs args = new LinkEventArgs();
-                        args.lnk = link;
-
-
+                        LinkEventArgs args = new LinkEventArgs()
+                        {
+                            lnk = link
+                        };
                         lock (_CallOnEmptyBuffer_Lock)
                         {
                             _CallOnEmptyBufferQueue.Enqueue(args);
                         }
 
                         QueueOnEmptyBuffer();
-
                     }
 
 
                     return true;
-
                 }
-
-                return false;
             }
+
+            return false;
         }
 
     }

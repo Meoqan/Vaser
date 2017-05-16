@@ -46,7 +46,6 @@ namespace Vaser
         /// </summary>
         public event EventHandler<LinkEventArgs> DisconnectingLink;
 
-
         /// <summary>
         /// The PortalCollection of this server.
         /// </summary>
@@ -65,7 +64,7 @@ namespace Vaser
         /// <summary>
         /// The used options for this server, such as unencrypted, kerberos or SSL.
         /// </summary>
-        public VaserOptions ServerOption
+        internal VaserOptions ServerOption
         {
             get
             {
@@ -86,6 +85,25 @@ namespace Vaser
             set
             {
                 _ConnectionList = value;
+            }
+        }
+
+        /// <summary>
+        /// A copy of all active links in this server
+        /// </summary>
+        public List<Link> LinkList
+        {
+            get
+            {
+                List<Link> TempList = new List<Link>();
+                lock (_ConnectionList_ThreadLock)
+                {
+                    foreach (Connection c in _ConnectionList)
+                    {
+                        TempList.Add(c.link);
+                    }
+                }
+                return TempList;
             }
         }
 
@@ -145,12 +163,7 @@ namespace Vaser
                 {
                     _TCPListener.Start();
                 }
-                /*_aTimer = new System.Timers.Timer(1);
-                _aTimer.Elapsed += ListenForClients;
-                _aTimer.AutoReset = true;
-                _aTimer.Enabled = true;*/
 
-                //new Thread(ListenForClients).Start();
                 DoBeginAcceptTcpClient();
 
                 if (_GCTimer == null)
@@ -363,9 +376,10 @@ namespace Vaser
             {
                 foreach (Link lnk in LinkListTEMP)
                 {
-                    LinkEventArgs args = new LinkEventArgs();
-                    args.lnk = lnk;
-
+                    LinkEventArgs args = new LinkEventArgs()
+                    {
+                        lnk = lnk
+                    };
                     OnNewLink(args);
                 }
                 LinkListTEMP = GetNewLinkList();
@@ -405,9 +419,10 @@ namespace Vaser
             lock (_ConnectionList_ThreadLock)
             {
                 _ConnectionList.Remove(con);
-                LinkEventArgs args = new LinkEventArgs();
-                args.lnk = con.link;
-
+                LinkEventArgs args = new LinkEventArgs()
+                {
+                    lnk = con.link
+                };
                 OnDisconnectingLink(args);
             }
 

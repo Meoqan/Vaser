@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using Vaser;
 using System.Threading;
 
-namespace test_server_benchmark
+namespace ATestServer_Disco
 {
     class Program
     {
@@ -47,7 +47,7 @@ namespace test_server_benchmark
             pkt = 0;
             lock (Livinglist_lock)
             {
-                Console.WriteLine("Packets in 10 Sek: " + x +" Connected Links: "+Livinglist.Count);
+                Console.WriteLine("Packets in 10 Sek: " + x + " Connected Links: " + Livinglist.Count);
 
                 /*if(linkarray != null)
                 {
@@ -62,12 +62,12 @@ namespace test_server_benchmark
 
                 linkarray = Livinglist.ToArray();
             }
-            
+
         }
 
         static void Main(string[] args)
         {
-            
+
 
             //Client initalisieren
             system = new Portal(100);
@@ -77,17 +77,10 @@ namespace test_server_benchmark
             system.IncomingPacket += OnSystemPacket;
             Vaser.ConnectionSettings.VaserKerberosServer k = new Vaser.ConnectionSettings.VaserKerberosServer();
             //start the server
-            VaserServer Server1 = new VaserServer(System.Net.IPAddress.Any, 3100, PC,k);
-            VaserServer Server2 = new VaserServer(System.Net.IPAddress.Any, 3101, PC,k);
-
+            VaserServer Server1 = new VaserServer(System.Net.IPAddress.Any, 3500, PC, k);
             Server1.NewLink += OnNewLinkServer1;
-            Server2.NewLink += OnNewLinkServer2;
-
             Server1.DisconnectingLink += OnDisconnectingLinkServer1;
-            Server2.DisconnectingLink += OnDisconnectingLinkServer2;
-
             Server1.Start();
-            Server2.Start();
             t = new Timer(TimerCallback, null, 10000, 10000);
             //TestContainer con2 = new TestContainer();
 
@@ -99,14 +92,13 @@ namespace test_server_benchmark
             t.Dispose();
             //close the server
             Server1.Stop();
-            Server2.Stop();
         }
 
         static TestContainer con3 = new TestContainer();
         static void OnNewLinkServer1(object p, LinkEventArgs e)
         {
 
-            //Console.WriteLine("CL1 CON " + object_counter);
+            Console.WriteLine("CL1 CON " + object_counter);
             lock (Livinglist_lock)
             {
                 Livinglist.Add(e.lnk);
@@ -121,45 +113,15 @@ namespace test_server_benchmark
             system.SendContainer(e.lnk, con3, 1, object_counter);
 
         }
-
-        static TestContainer con4 = new TestContainer();
-        static void OnNewLinkServer2(object p, LinkEventArgs e)
-        {
-
-            //Console.WriteLine("             CL2 CON " + object_counter);
-            lock (Livinglist_lock)
-            {
-                Livinglist.Add(e.lnk);
-            }
-            e.lnk.Accept();
-
-            //send data
-            con4.ID = 0;
-            con4.test = "You are connected to Server 2 via Vaser. Please send your Logindata.";
-            // the last 2 digits are manually set [1]
-            object_counter++;
-            system.SendContainer(e.lnk, con4, 1, object_counter);
-
-        }
-
+        
         static void OnDisconnectingLinkServer1(object p, LinkEventArgs e)
         {
-            //Console.WriteLine("                        CL1 DIS");
+            Console.WriteLine("                        CL1 DIS");
             lock (Livinglist_lock)
             {
                 Livinglist.Remove(e.lnk);
             }
         }
-
-        static void OnDisconnectingLinkServer2(object p, LinkEventArgs e)
-        {
-            //Console.WriteLine("                                  CL2 DIS");
-            lock (Livinglist_lock)
-            {
-                Livinglist.Remove(e.lnk);
-            }
-        }
-
 
         static TestContainer con2 = new TestContainer();
         static void OnSystemPacket(object p, PacketEventArgs e)
@@ -168,7 +130,7 @@ namespace test_server_benchmark
             if (con2.UnpackContainer(e.pak))
             {
                 //Console.WriteLine(con1.test);
-                //Console.WriteLine("Pong!  CounterID" + con2.ID + " Object:" + e.pak.ObjectID);
+                Console.WriteLine("Pong!  CounterID" + con2.ID + " Object:" + e.pak.ObjectID);
                 // the last 2 digits are manually set [1]
                 e.portal.SendContainer(e.lnk, con2, 1, e.pak.ObjectID);
                 pkt++;
@@ -178,5 +140,6 @@ namespace test_server_benchmark
                 Console.WriteLine("Decode error");
             }
         }
+
     }
 }

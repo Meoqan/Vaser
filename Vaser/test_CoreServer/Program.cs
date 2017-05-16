@@ -193,7 +193,7 @@ namespace test_CoreServer
                 case 2:
 
                     //unpack the packet, true if the decode was successful
-                    if (con3.UnpackContainer(e.pak, e.portal))
+                    if (con3.UnpackContainer(e.pak))
                     {
                         if (watch.IsRunning == false) watch.Start();
 

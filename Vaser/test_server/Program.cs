@@ -123,8 +123,9 @@ namespace test_server
                         break;
 
                     case 4:
-                        test1.Dispose();
+                        //test1.Dispose();
                         Console.WriteLine("Closed");
+                        Thread.Sleep(500);
                         testmode = -1;
                         break;
                 }
@@ -184,6 +185,7 @@ namespace test_server
         static void OnDisconnectingLink(object p, LinkEventArgs e)
         {
             Console.WriteLine("Disconnecting");
+            e.lnk.Dispose();
         }
 
 
@@ -196,7 +198,7 @@ namespace test_server
                 case 2:
 
                     //unpack the packet, true if the decode was successful
-                    if (con3.UnpackContainer(e.pak, e.portal))
+                    if (con3.UnpackContainer(e.pak))
                     {
                         if (watch.IsRunning == false) watch.Start();
 

@@ -17,7 +17,7 @@ namespace test_server
         TestContainer con2 = new TestContainer();
         public override void IncomingPacket(object p, PacketEventArgs e)
         {
-            if (e.pak != null && con2.UnpackContainer(e.pak, e.portal))
+            if (con2.UnpackContainer(e.pak))
             {
                 Console.WriteLine(con2.test);
                 con2.test = "Hello Back channel!";

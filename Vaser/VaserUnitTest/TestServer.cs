@@ -72,7 +72,7 @@ namespace VaserUnitTest
         void OnTestRunningServer(object p, PacketEventArgs e)
         {
             //unpack the packet, true if the decode was successful
-            if (con2.UnpackContainer(e.pak, e.portal))
+            if (con2.UnpackContainer(e.pak))
             {
                 //Console.WriteLine(con1.test);
                 Debug.WriteLine("Ping!  CounterID" + con2.ID + " Object:" + e.pak.ObjectID);

@@ -46,7 +46,7 @@ namespace Vaser
         public event EventHandler<PacketEventArgs> IncomingPacket;
 
         internal List<Packet_Recv> packetList1 = new List<Packet_Recv>();
-        
+
         internal MemoryStream _sendMS = null;
         internal BinaryWriter _sendBW = null;
 
@@ -82,8 +82,8 @@ namespace Vaser
                 }
             }
 
-            
-            
+
+
         }
 
         internal void RegisterRequest(ushort ContainerID, OON.cRequest _Request)
@@ -98,7 +98,7 @@ namespace Vaser
 
         internal void RemoveDisconectingLinkFromRequests(Link _lnk)
         {
-            foreach(OON.cRequest r in RequestDictionary.Values)
+            foreach (OON.cRequest r in RequestDictionary.Values)
             {
                 r.RemoveDisconnectedLink(_lnk);
             }
@@ -111,23 +111,24 @@ namespace Vaser
         PacketEventArgs args = null;
         private void EventWorker(object threadContext)
         {
-            //operating Threadsafe
-            lock (_EventWorker_lock)
+            List<Packet_Recv> templist = GetPakets();
+            while (templist.Count != 0)
             {
-                List<Packet_Recv> templist = GetPakets();
-                while (templist.Count != 0)
+                //Debug.WriteLine("EventWorker");
+                foreach (Packet_Recv paks in templist)
                 {
-                    //Debug.WriteLine("EventWorker");
-                    foreach (Packet_Recv pak in templist)
+                    if (!paks.link.Connect.StreamIsConnected) break; //Stop processing packets when client is disconnected
+
+                    args = new PacketEventArgs
                     {
-                        if (!pak.link.IsConnected) break; //Stop processing packets when client is disconnected
+                        lnk = paks.link,
+                        pak = paks,
+                        portal = this
+                    };
 
-                        args = new PacketEventArgs();
-                        args.lnk = pak.link;
-                        args.pak = pak;
-                        args.portal = this;
-
-                        if (ChannelDictionary.TryGetValue(pak.ContainerID, out channel))
+                    try
+                    {
+                        if (ChannelDictionary.TryGetValue(paks.ContainerID, out channel))
                         {
                             //Console.WriteLine("RequestDictionary");
                             channel.ProcessPacket(this, args);
@@ -135,7 +136,7 @@ namespace Vaser
                         else
                         {
                             // wenn con id in request liste dann
-                            if (RequestDictionary.TryGetValue(pak.ContainerID, out request))
+                            if (RequestDictionary.TryGetValue(paks.ContainerID, out request))
                             {
                                 //Console.WriteLine("RequestDictionary");
                                 request.ProcessPacket(this, args);
@@ -146,11 +147,16 @@ namespace Vaser
                                 OnIncomingPacket(args);
                             }
                         }
-                        
                     }
-                    templist = GetPakets();
+                    catch
+                    {
+                        paks.link.Dispose();
+                    }
                 }
+                templist.Clear();
+                templist = GetPakets();
             }
+
         }
 
         /// <summary>
@@ -176,8 +182,8 @@ namespace Vaser
             {
 
                 packetListTEMP = packetList1;
-                packetList1 =  new List<Packet_Recv>();
-                if(packetListTEMP.Count == 0) QueueLock = false;
+                packetList1 = new List<Packet_Recv>();
+                if (packetListTEMP.Count == 0) QueueLock = false;
             }
 
             return packetListTEMP;
@@ -196,36 +202,30 @@ namespace Vaser
         /// <param name="CallEmptyBufferEvent">if true raise an event</param>
         public void SendContainer(Link lnk, Container con, ushort ContainerID, uint ObjectID, bool CallEmptyBufferEvent = false)
         {
-            try
+
+            //Operating threadsave
+            lock (SendContainer_lock)
             {
-                //Operating threadsave
-                lock (SendContainer_lock)
+                if (lnk.IsConnected == false || _sendBW == null) return;
+
+
+                // write databody
+                counter = 0;
+                if (con != null)
                 {
-                    if (lnk.IsConnected == false || _sendBW == null) return;
+                    _sendMS.Position = Options.PacketHeadSize + 4;
 
-
-                    // write databody
-                    counter = 0;
-                    Packet_Send spacket = null;
-                    if (con != null)
+                    Packet_Send spacket = con.PackContainer(_sendBW, _sendMS);
+                    //big datapacket dedected
+                    if (_sendMS.Position >= Options.MaximumPacketSize + 4)
                     {
-                        _sendMS.Position = Options.PacketHeadSize + 4;
-
-                        spacket = con.PackContainer(_sendBW, _sendMS);
-                        //big datapacket dedected
-                        if (_sendMS.Position >= Options.MaximumPacketSize + 4)
-                        {
-                            return;
-                        }
-                        else
-                        {
-                            counter = (ushort)_sendMS.Position - 4;
-                        }
+                        return;
                     }
                     else
                     {
-                        counter += Options.PacketHeadSize;
+                        counter = (ushort)_sendMS.Position - 4;
                     }
+
 
                     //write header
                     _sendMS.Position = 0;
@@ -236,38 +236,51 @@ namespace Vaser
                     _sendBW.Write(ObjectID);
                     _sendBW.Write(ContainerID);
 
+                    //Operating threadsave
+                    lock (lnk.SendData_Lock)
+                    {
+                        if (lnk.SendDataPortalArray[_PID] != null)
+                        {
+                            spacket._SendData = _sendMS.ToArray();
+                            spacket._CallEmpybuffer = CallEmptyBufferEvent;
 
+                            lnk.SendDataPortalArray[_PID].Enqueue(spacket);
+                            lnk.Connect.QueueSend();
+                        }
+                    }
+                }
+                else
+                {
+                    counter += Options.PacketHeadSize;
+
+                    //write header
+                    _sendMS.Position = 0;
+
+                    _sendBW.Write(counter);
+
+                    _sendBW.Write(this._PID);
+                    _sendBW.Write(ObjectID);
+                    _sendBW.Write(ContainerID);
 
                     //Operating threadsave
                     lock (lnk.SendData_Lock)
                     {
                         if (lnk.SendDataPortalArray[_PID] != null)
                         {
-                            if (spacket == null)
-                            {
-                                spacket = new Packet_Send(_sendMS.ToArray(), CallEmptyBufferEvent);
-                            }
-                            else
-                            {
-                                spacket._SendData = _sendMS.ToArray();
-                                spacket._CallEmpybuffer = CallEmptyBufferEvent;
-                            }
+                            Packet_Send spacket = new Packet_Send(_sendMS.ToArray(), CallEmptyBufferEvent);
 
                             lnk.SendDataPortalArray[_PID].Enqueue(spacket);
                             lnk.Connect.QueueSend();
                         }
                     }
-
-                    //reset 
-                    _sendMS.SetLength(0);
-                    //_sendMS.Flush();
-
                 }
+
+                //reset 
+                _sendMS.SetLength(0);
+                //_sendMS.Flush();
+
             }
-            catch (Exception es)
-            {
-                Debug.WriteLine("Portal.SendContainer()  > " + es.ToString());
-            }
+
         }
 
         /// <summary>
@@ -277,60 +290,54 @@ namespace Vaser
         /// <param name="packet">The unread packet.</param>
         public void DispatchContainer(Link lnk, Packet_Recv packet)
         {
-            try
+            //Operating threadsave
+            lock (SendContainer_lock)
             {
-                //Operating threadsave
-                lock (SendContainer_lock)
+                if (lnk.IsConnected == false || _sendBW == null) return;
+
+                _sendMS.Position = 0;
+                if (_sendBW != null)
                 {
-                    if (lnk.IsConnected == false || _sendBW == null) return;
-
-                    _sendMS.Position = 0;
-                    if (_sendBW != null)
+                    if (packet.Data == null)
                     {
-                        if (packet == null)
-                        {
-                            _sendBW.Write(Options.PacketHeadSize);
+                        _sendBW.Write(Options.PacketHeadSize);
 
-                            _sendBW.Write(this._PID);
-                            _sendBW.Write(packet.ObjectID);
-                            _sendBW.Write(packet.ContainerID);
-                        }
-                        else
-                        {
-                            _sendBW.Write(packet.Data.Length + Options.PacketHeadSize);
-
-                            _sendBW.Write(this._PID);
-                            _sendBW.Write(packet.ObjectID);
-                            _sendBW.Write(packet.ContainerID);
-
-                            _sendBW.Write(packet.Data);
-                        }
+                        _sendBW.Write(this._PID);
+                        _sendBW.Write(packet.ObjectID);
+                        _sendBW.Write(packet.ContainerID);
                     }
-
-                    //Operating threadsave
-                    lock (lnk.SendData_Lock)
+                    else
                     {
-                        if (lnk.SendDataPortalArray[_PID] != null)
-                        {
+                        _sendBW.Write(packet.Data.Length + Options.PacketHeadSize);
 
-                            Packet_Send spacket = new Packet_Send(_sendMS.ToArray(), false);
+                        _sendBW.Write(this._PID);
+                        _sendBW.Write(packet.ObjectID);
+                        _sendBW.Write(packet.ContainerID);
 
-                            lnk.SendDataPortalArray[_PID].Enqueue(spacket);
-                            lnk.Connect.QueueSend();
-
-                        }
+                        _sendBW.Write(packet.Data);
                     }
-
-                    //reset 
-                    _sendMS.SetLength(0);
-                    //_sendMS.Flush();
-
                 }
+
+                //Operating threadsave
+                lock (lnk.SendData_Lock)
+                {
+                    if (lnk.SendDataPortalArray[_PID] != null)
+                    {
+
+                        Packet_Send spacket = new Packet_Send(_sendMS.ToArray(), false);
+
+                        lnk.SendDataPortalArray[_PID].Enqueue(spacket);
+                        lnk.Connect.QueueSend();
+
+                    }
+                }
+
+                //reset 
+                _sendMS.SetLength(0);
+                //_sendMS.Flush();
+
             }
-            catch (Exception es)
-            {
-                Debug.WriteLine("Portal.SendContainer()  > " + es.ToString());
-            }
+
         }
 
         /// <summary>
@@ -348,5 +355,5 @@ namespace Vaser
 
     }
 
-   
+
 }

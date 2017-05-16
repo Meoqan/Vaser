@@ -64,7 +64,7 @@ namespace Vaser
         /// <summary>
         /// The used options for this server, such as unencrypted, kerberos or SSL.
         /// </summary>
-        public VaserOptions ServerOption
+        internal VaserOptions ServerOption
         {
             get
             {
@@ -85,6 +85,25 @@ namespace Vaser
             set
             {
                 _ConnectionList = value;
+            }
+        }
+
+        /// <summary>
+        /// A copy of all active links in this server
+        /// </summary>
+        public List<Link> LinkList
+        {
+            get
+            {
+                List<Link> TempList = new List<Link>();
+                lock (_ConnectionList_ThreadLock)
+                {
+                    foreach (Connection c in _ConnectionList)
+                    {
+                        TempList.Add(c.link);
+                    }
+                }
+                return TempList;
             }
         }
 
@@ -354,9 +373,10 @@ namespace Vaser
             {
                 foreach (Link lnk in LinkListTEMP)
                 {
-                    LinkEventArgs args = new LinkEventArgs();
-                    args.lnk = lnk;
-
+                    LinkEventArgs args = new LinkEventArgs()
+                    {
+                        lnk = lnk
+                    };
                     OnNewLink(args);
                 }
                 LinkListTEMP = GetNewLinkList();
@@ -393,15 +413,16 @@ namespace Vaser
         {
             if (con == null) return;
 
-                lock (_ConnectionList_ThreadLock)
+            lock (_ConnectionList_ThreadLock)
+            {
+                _ConnectionList.Remove(con);
+                LinkEventArgs args = new LinkEventArgs()
                 {
-                    _ConnectionList.Remove(con);
-                    LinkEventArgs args = new LinkEventArgs();
-                    args.lnk = con.link;
-
-                    OnDisconnectingLink(args);
+                    lnk = con.link
+                };
+                OnDisconnectingLink(args);
             }
-                
+
         }
 
         /// <summary>

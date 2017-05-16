@@ -1,6 +1,6 @@
 ﻿namespace Vaser
 {
-    internal class Options
+    internal struct Options
     {
         internal static volatile bool Operating = true;
         internal static readonly int MaximumPacketSize = 65007;

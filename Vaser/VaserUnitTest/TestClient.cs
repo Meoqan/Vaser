@@ -48,7 +48,7 @@ namespace VaserUnitTest
         void OnTestClient(object p, PacketEventArgs e)
         {
             //unpack the packet, true if the decode was successful
-            if (con4.UnpackContainer(e.pak, e.portal))
+            if (con4.UnpackContainer(e.pak))
             {
                 //Console.WriteLine(con1.test);
                 Debug.WriteLine("Pong!  CounterID" + con4.ID + " Object:" + e.pak.ObjectID);

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using Vaser.OON;
 
@@ -74,7 +75,24 @@ namespace Vaser
 
         internal void GivePacketToClass(Packet_Recv pak)
         {
-            lock (_GivePacketToClass_lock)
+
+            Portal clas = PortalArray[pak.ClassID];
+            if (clas != null)
+            {
+                clas.AddPacket(pak);
+            }
+            else
+            {
+                Debug.WriteLine("Vaser.Portal> Portal not found.");
+                pak.link.Dispose();
+            }
+
+        }
+
+        internal void GivePacketToClass(List<Packet_Recv> Lpak)
+        {
+
+            foreach (Packet_Recv pak in Lpak)
             {
                 Portal clas = PortalArray[pak.ClassID];
                 if (clas != null)
@@ -87,6 +105,7 @@ namespace Vaser
                     pak.link.Dispose();
                 }
             }
+
         }
 
         internal void RemoveDisconectingLinkFromRequest(Link _lnk)

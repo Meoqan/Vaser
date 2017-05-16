@@ -254,9 +254,14 @@ namespace Vaser
                 Debug.WriteLine("ERROR in VaserServer.ListenForClients() > " + ex.ToString());
             }
 
+            DoStop();
+        }
+
+        void DoStop()
+        {
             if (!ServerOnline || !Options.Operating)
             {
-                //_aTimer.Dispose();
+                //_aTimer.Enabled = false;
 
                 lock (_ConnectionList_ThreadLock)
                 {
@@ -311,9 +316,10 @@ namespace Vaser
             {
                 foreach (Link lnk in LinkListTEMP)
                 {
-                    LinkEventArgs args = new LinkEventArgs();
-                    args.lnk = lnk;
-
+                    LinkEventArgs args = new LinkEventArgs()
+                    {
+                        lnk = lnk
+                    };
                     OnNewLink(args);
                 }
                 LinkListTEMP = GetNewLinkList();
@@ -353,9 +359,10 @@ namespace Vaser
             lock (_ConnectionList_ThreadLock)
             {
                 _ConnectionList.Remove(con);
-                LinkEventArgs args = new LinkEventArgs();
-                args.lnk = con.link;
-
+                LinkEventArgs args = new LinkEventArgs()
+                {
+                    lnk = con.link
+                };
                 OnDisconnectingLink(args);
             }
 

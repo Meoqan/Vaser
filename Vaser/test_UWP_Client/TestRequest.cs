@@ -22,7 +22,7 @@ namespace test_UWP_Client
         TestContainer con2 = new TestContainer();
         public override void RequestResult(object p, PacketEventArgs e)
         {
-            if (e.pak != null && con2.UnpackContainer(e.pak, e.portal))
+            if (con2.UnpackContainer(e.pak))
             {
                 Debug.WriteLine(con2.test);
 

@@ -31,12 +31,7 @@ namespace Vaser
                 {
                     PColl._Active = true;
                     Connection con = new Connection(client, false, VaserOptions.ModeNotEncrypted, PColl, null, null, null, null);
-
-                    lock (Link._Static_ThreadLock)
-                    {
-                        Link.LinkList.Add(con.link);
-                    }
-
+                    
                     return con.link;
                 }
                 else
@@ -73,12 +68,7 @@ namespace Vaser
                 {
                     PColl._Active = true;
                     Connection con = new Connection(client, false, VaserOptions.ModeKerberos, PColl, null, null, Kerberos, null);
-
-                    lock (Link._Static_ThreadLock)
-                    {
-                        Link.LinkList.Add(con.link);
-                    }
-
+                    
                     return con.link;
                 }
                 else
@@ -114,12 +104,7 @@ namespace Vaser
                 {
                     PColl._Active = true;
                     Connection con = new Connection(client, false, VaserOptions.ModeSSL, PColl, null, null, null, SSL);
-
-                    lock(Link._Static_ThreadLock)
-                    {
-                        Link.LinkList.Add(con.link);
-                    }
-
+                    
                     return con.link;
                 }
                 else
