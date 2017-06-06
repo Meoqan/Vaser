@@ -14,6 +14,14 @@ Server <-----TCP/IP-----> Clients
 
 The main goal of this engine is simplified _object-oriented networking_.
 
+### Links:
+**[NuGet Packet](https://www.nuget.org/packages/Vaser/)**
+
+**[GitHub Wiki](https://github.com/Meoqan/Vaser/wiki)**
+
+**[API and reference catalog](http://clusterware.de/Doc/).**
+
+
 ### Features:
 
 + the communication is Kerberos or SSL encrypted
@@ -24,8 +32,6 @@ The main goal of this engine is simplified _object-oriented networking_.
 + data packets have ObjectID’s and ContainerID’s identifier for simplified _object-oriented networking_
 + ready for use request-response-pattern classes
 + robust programming architecture
-
-**The Vaser API and reference catalog can be found [here](http://clusterware.de/Doc/).**
 
 Build your own simple Datapackages for your Application:
 
