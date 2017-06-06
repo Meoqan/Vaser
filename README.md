@@ -19,7 +19,7 @@ The main goal of this engine is simplified _object-oriented networking_.
 
 **[GitHub Wiki](https://github.com/Meoqan/Vaser/wiki)**
 
-**[API and reference catalog](http://clusterware.de/Doc/).**
+**[API and reference catalog](http://clusterware.de/Doc/)**
 
 
 ### Features:
