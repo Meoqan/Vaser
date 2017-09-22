@@ -145,7 +145,6 @@ namespace Vaser
                             OnIncomingPacket(args);
                         }
                     }
-
                 }
                 templist.Clear();
                 templist = GetPakets();

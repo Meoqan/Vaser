@@ -160,10 +160,10 @@ namespace Vaser
 
                     Stop();
 
-                    _rbr2.Dispose();
-                    _rbr2 = null;
-                    _rms2.Dispose();
-                    _buff = null;
+                    if (_rbr2 != null) _rbr2.Dispose();
+                    if (_rbr2 != null) _rbr2 = null;
+                    if (_rms2 != null) _rms2.Dispose();
+                    if (_buff != null) _buff = null;
 
                     // encryption
                     /*if (_Mode == VaserOptions.ModeKerberos && _AuthStream != null)
@@ -494,7 +494,14 @@ namespace Vaser
                 }
             }
             StreamIsConnected = false;
-            if (_SocketTCPClient.Connected) _SocketTCPClient.Shutdown(SocketShutdown.Send);
+            try
+            {
+                if (_SocketTCPClient.Connected) _SocketTCPClient.Shutdown(SocketShutdown.Send);
+            }
+            catch
+            {
+                //error
+            }
             //if (_SocketTCPClient.Connected) _SocketTCPClient.Disconnect(true);
         }
 
@@ -509,11 +516,11 @@ namespace Vaser
                     if (bytesRead == 0)
                     {
                         Stop();
-                        
-                        _rbr2.Dispose();
-                        _rbr2 = null;
-                        _rms2.Dispose();
-                        _buff = null;
+
+                        if (_rbr2 != null) _rbr2.Dispose();
+                        if (_rbr2 != null) _rbr2 = null;
+                        if (_rms2 != null) _rms2.Dispose();
+                        if (_buff != null) _buff = null;
 
                         return;
                     }
@@ -526,10 +533,10 @@ namespace Vaser
                 StreamIsConnected = false;
                 Stop();
 
-                _rbr2.Dispose();
-                _rbr2 = null;
-                _rms2.Dispose();
-                _buff = null;
+                if (_rbr2 != null) _rbr2.Dispose();
+                if (_rbr2 != null) _rbr2 = null;
+                if (_rms2 != null) _rms2.Dispose();
+                if (_buff != null) _buff = null;
 
                 Debug.WriteLine("Connection.Receive()  >" + e.ToString());
                 //if (e.InnerException != null) Console.WriteLine("Inner exception: {0}", e.InnerException);
@@ -547,10 +554,10 @@ namespace Vaser
                     {
                         Stop();
 
-                        _rbr2.Dispose();
-                        _rbr2 = null;
-                        _rms2.Dispose();
-                        _buff = null;
+                        if (_rbr2 != null) _rbr2.Dispose();
+                        if (_rbr2 != null) _rbr2 = null;
+                        if (_rms2 != null) _rms2.Dispose();
+                        if (_buff != null) _buff = null;
 
                         return;
                     }
@@ -562,10 +569,10 @@ namespace Vaser
                 StreamIsConnected = false;
                 Stop();
 
-                _rbr2.Dispose();
-                _rbr2 = null;
-                _rms2.Dispose();
-                _buff = null;
+                if (_rbr2 != null) _rbr2.Dispose();
+                if (_rbr2 != null) _rbr2 = null;
+                if (_rms2 != null) _rms2.Dispose();
+                if (_buff != null) _buff = null;
 
                 Debug.WriteLine("Connection.Receive()  >" + e.ToString());
                 //if (e.InnerException != null) Console.WriteLine("Inner exception: {0}", e.InnerException);
@@ -585,10 +592,10 @@ namespace Vaser
                     {
                         Stop();
 
-                        _rbr2.Dispose();
-                        _rbr2 = null;
-                        _rms2.Dispose();
-                        _buff = null;
+                        if (_rbr2 != null) _rbr2.Dispose();
+                        if (_rbr2 != null) _rbr2 = null;
+                        if (_rms2 != null) _rms2.Dispose();
+                        if (_buff != null) _buff = null;
 
                         return;
                     }
@@ -600,10 +607,10 @@ namespace Vaser
                 StreamIsConnected = false;
                 Stop();
 
-                _rbr2.Dispose();
-                _rbr2 = null;
-                _rms2.Dispose();
-                _buff = null;
+                if (_rbr2 != null) _rbr2.Dispose();
+                if (_rbr2 != null) _rbr2 = null;
+                if (_rms2 != null) _rms2.Dispose();
+                if (_buff != null) _buff = null;
 
                 Debug.WriteLine("Connection.Receive()  >" + e.ToString());
                 //if (e.InnerException != null) Console.WriteLine("Inner exception: {0}", e.InnerException);
@@ -755,7 +762,14 @@ namespace Vaser
 
                     if (_SocketTCPClient.Connected)
                     {
-                        await _AuthStream.WriteAsync(byteData._SendData, 0, byteData._SendData.Length);
+                        try
+                        {
+                            await _AuthStream.WriteAsync(byteData._SendData, 0, byteData._SendData.Length);
+                        }
+                        catch (Exception ex)
+                        {
+                            Stop();
+                        }
                     }
 
                 }

@@ -141,6 +141,7 @@ namespace test_client
             //unpack the packet, true if the decode was successful
             if (con1.UnpackContainer(e.pak))
             {
+                //throw new Exception("Test");
                 //Console.WriteLine("PACK");
                 e.portal.SendContainer(e.lnk, con1, 1, 1);
                 //Portal.Finialize();

@@ -67,6 +67,19 @@ namespace Vaser.OON
         }
 
         /// <summary>
+        /// Sets the status to done and returns a Message
+        /// </summary>
+        /// <param name="_Message">Your Message</param>
+        public void SetDone(string _Message)
+        {
+            Message = _Message;
+
+            Done = true;
+
+            SendDiscoverEvent.Set();
+        }
+
+        /// <summary>
         /// Sets the status to done and returns an ResultObject
         /// </summary>
         /// <param name="_ResultObject">Your Object</param>

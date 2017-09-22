@@ -181,10 +181,10 @@ namespace Vaser
 
                     Stop();
 
-                    _rbr2.Dispose();
-                    _rbr2 = null;
-                    _rms2.Dispose();
-                    _buff = null;
+                    if (_rbr2 != null) _rbr2.Dispose();
+                    if (_rbr2 != null) _rbr2 = null;
+                    if (_rms2 != null) _rms2.Dispose();
+                    if (_buff != null) _buff = null;
 
                     // encryption
                     /*if (_Mode == VaserOptions.ModeKerberos && _AuthStream != null)
@@ -552,7 +552,14 @@ namespace Vaser
                 }
             }
             StreamIsConnected = false;
-            if (_SocketTCPClient.Connected) _SocketTCPClient.Shutdown(SocketShutdown.Send);
+            try
+            {
+                if (_SocketTCPClient.Connected) _SocketTCPClient.Shutdown(SocketShutdown.Send);
+            }
+            catch
+            {
+                //error
+            }
             //if (_SocketTCPClient.Connected) _SocketTCPClient.Disconnect(true);
         }
 
@@ -575,10 +582,10 @@ namespace Vaser
                 StreamIsConnected = false;
                 Stop();
 
-                _rbr2.Dispose();
-                _rbr2 = null;
-                _rms2.Dispose();
-                _buff = null;
+                if (_rbr2 != null) _rbr2.Dispose();
+                if (_rbr2 != null) _rbr2 = null;
+                if (_rms2 != null) _rms2.Dispose();
+                if (_buff != null) _buff = null;
             }
 
         }
@@ -599,10 +606,10 @@ namespace Vaser
                     StreamIsConnected = false;
                     Stop();
 
-                    _rbr2.Dispose();
-                    _rbr2 = null;
-                    _rms2.Dispose();
-                    _buff = null;
+                    if (_rbr2 != null) _rbr2.Dispose();
+                    if (_rbr2 != null) _rbr2 = null;
+                    if (_rms2 != null) _rms2.Dispose();
+                    if (_buff != null) _buff = null;
 
                 }
             }
@@ -611,10 +618,10 @@ namespace Vaser
                 StreamIsConnected = false;
                 Stop();
 
-                _rbr2.Dispose();
-                _rbr2 = null;
-                _rms2.Dispose();
-                _buff = null;
+                if (_rbr2 != null) _rbr2.Dispose();
+                if (_rbr2 != null) _rbr2 = null;
+                if (_rms2 != null) _rms2.Dispose();
+                if (_buff != null) _buff = null;
             }
         }
 
@@ -629,10 +636,10 @@ namespace Vaser
                 StreamIsConnected = false;
                 Stop();
 
-                _rbr2.Dispose();
-                _rbr2 = null;
-                _rms2.Dispose();
-                _buff = null;
+                if (_rbr2 != null) _rbr2.Dispose();
+                if (_rbr2 != null) _rbr2 = null;
+                if (_rms2 != null) _rms2.Dispose();
+                if (_buff != null) _buff = null;
             }
         }
 
@@ -652,10 +659,10 @@ namespace Vaser
                     StreamIsConnected = false;
                     Stop();
 
-                    _rbr2.Dispose();
-                    _rbr2 = null;
-                    _rms2.Dispose();
-                    _buff = null;
+                    if (_rbr2 != null) _rbr2.Dispose();
+                    if (_rbr2 != null) _rbr2 = null;
+                    if (_rms2 != null) _rms2.Dispose();
+                    if (_buff != null) _buff = null;
                 }
             }
             catch
@@ -663,10 +670,10 @@ namespace Vaser
                 StreamIsConnected = false;
                 Stop();
 
-                _rbr2.Dispose();
-                _rbr2 = null;
-                _rms2.Dispose();
-                _buff = null;
+                if (_rbr2 != null) _rbr2.Dispose();
+                if (_rbr2 != null) _rbr2 = null;
+                if (_rms2 != null) _rms2.Dispose();
+                if (_buff != null) _buff = null;
             }
         }
 
@@ -681,10 +688,10 @@ namespace Vaser
                 StreamIsConnected = false;
                 Stop();
 
-                _rbr2.Dispose();
-                _rbr2 = null;
-                _rms2.Dispose();
-                _buff = null;
+                if (_rbr2 != null) _rbr2.Dispose();
+                if (_rbr2 != null) _rbr2 = null;
+                if (_rms2 != null) _rms2.Dispose();
+                if (_buff != null) _buff = null;
             }
         }
 
@@ -704,10 +711,10 @@ namespace Vaser
                     StreamIsConnected = false;
                     Stop();
 
-                    _rbr2.Dispose();
-                    _rbr2 = null;
-                    _rms2.Dispose();
-                    _buff = null;
+                    if (_rbr2 != null) _rbr2.Dispose();
+                    if (_rbr2 != null) _rbr2 = null;
+                    if (_rms2 != null) _rms2.Dispose();
+                    if (_buff != null) _buff = null;
                 }
             }
             catch
@@ -715,10 +722,10 @@ namespace Vaser
                 StreamIsConnected = false;
                 Stop();
 
-                _rbr2.Dispose();
-                _rbr2 = null;
-                _rms2.Dispose();
-                _buff = null;
+                if (_rbr2 != null) _rbr2.Dispose();
+                if (_rbr2 != null) _rbr2 = null;
+                if (_rms2 != null) _rms2.Dispose();
+                if (_buff != null) _buff = null;
             }
         }
 
@@ -836,7 +843,14 @@ namespace Vaser
                 if (GetPackets()) return;
                 if (_SocketTCPClient.Connected)
                 {
-                    _SocketTCPClient.BeginSend(byteData._SendData, 0, byteData._SendData.Length, 0, mySendNotEncryptedCallback, _SocketTCPClient);
+                    try
+                    {
+                        _SocketTCPClient.BeginSend(byteData._SendData, 0, byteData._SendData.Length, 0, mySendNotEncryptedCallback, _SocketTCPClient);
+                    }
+                    catch
+                    {
+                        Stop();
+                    }
                 }
                 else
                 {
@@ -879,7 +893,14 @@ namespace Vaser
                 if (GetPackets()) return;
                 if (_SocketTCPClient.Connected)
                 {
-                    _AuthStream.BeginWrite(byteData._SendData, 0, byteData._SendData.Length, mySendKerberosCallback, _AuthStream);
+                    try
+                    {
+                        _AuthStream.BeginWrite(byteData._SendData, 0, byteData._SendData.Length, mySendKerberosCallback, _AuthStream);
+                    }
+                    catch
+                    {
+                        Stop();
+                    }
                 }
                 else
                 {
@@ -913,7 +934,14 @@ namespace Vaser
                 if (GetPackets()) return;
                 if (_SocketTCPClient.Connected)
                 {
-                    _sslStream.BeginWrite(byteData._SendData, 0, byteData._SendData.Length, mySendSSLCallback, _sslStream);
+                    try
+                    {
+                        _sslStream.BeginWrite(byteData._SendData, 0, byteData._SendData.Length, mySendSSLCallback, _sslStream);
+                    }
+                    catch
+                    {
+                        Stop();
+                    }
                 }
                 else
                 {

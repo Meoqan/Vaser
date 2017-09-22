@@ -132,6 +132,26 @@ namespace Vaser.OON
         }
 
         /// <summary>
+        /// Start an reqeust and wait for an response
+        /// </summary>
+        /// <param name="lnk">Link</param>
+        /// <param name="CallEmptyBuffer">Raise an "call empty bufffer" event</param>
+        /// <returns>Status object</returns>
+        public cStatus StartRequest(Link lnk, bool CallEmptyBuffer = false)
+        {
+            cStatus nStatus = StatusFactory(lnk);
+
+            lock (StatusDictionary)
+            {
+                StatusDictionary.Add(nStatus.TransmissionID, nStatus);
+            }
+
+            SendPacket(lnk, null, nStatus, CallEmptyBuffer);
+
+            return nStatus;
+        }
+
+        /// <summary>
         /// Send an Response of a request
         /// </summary>
         /// <param name="myContainer">Data container</param>

@@ -163,10 +163,10 @@ namespace Vaser
 
                     Stop();
 
-                    _rbr2.Dispose();
-                    _rbr2 = null;
-                    _rms2.Dispose();
-                    _buff = null;
+                    if (_rbr2 != null) _rbr2.Dispose();
+                    if (_rbr2 != null) _rbr2 = null;
+                    if (_rms2 != null) _rms2.Dispose();
+                    if (_buff != null) _buff = null;
 
                     // encryption
                     /*if (_Mode == VaserOptions.ModeKerberos && _AuthStream != null)
@@ -727,7 +727,7 @@ namespace Vaser
 
                     if (_SocketTCPClient != null)
                     {
-                        outStream.WriteBytes(byteData._SendData);
+                            outStream.WriteBytes(byteData._SendData);
                     }
                 }
             }

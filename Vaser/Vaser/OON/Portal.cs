@@ -126,32 +126,26 @@ namespace Vaser
                         portal = this
                     };
 
-                    try
+                    if (ChannelDictionary.TryGetValue(paks.ContainerID, out channel))
                     {
-                        if (ChannelDictionary.TryGetValue(paks.ContainerID, out channel))
+                        //Console.WriteLine("RequestDictionary");
+                        channel.ProcessPacket(this, args);
+                    }
+                    else
+                    {
+                        // wenn con id in request liste dann
+                        if (RequestDictionary.TryGetValue(paks.ContainerID, out request))
                         {
                             //Console.WriteLine("RequestDictionary");
-                            channel.ProcessPacket(this, args);
+                            request.ProcessPacket(this, args);
                         }
                         else
                         {
-                            // wenn con id in request liste dann
-                            if (RequestDictionary.TryGetValue(paks.ContainerID, out request))
-                            {
-                                //Console.WriteLine("RequestDictionary");
-                                request.ProcessPacket(this, args);
-                            }
-                            else
-                            {
-                                //Console.WriteLine("OnIncomingPacket");
-                                OnIncomingPacket(args);
-                            }
+                            //Console.WriteLine("OnIncomingPacket");
+                            OnIncomingPacket(args);
                         }
                     }
-                    catch
-                    {
-                        paks.link.Dispose();
-                    }
+
                 }
                 templist.Clear();
                 templist = GetPakets();

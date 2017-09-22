@@ -13,9 +13,9 @@
     <GenerateAssemblyConfigurationAttribute>false</GenerateAssemblyConfigurationAttribute>
     <GenerateAssemblyCompanyAttribute>false</GenerateAssemblyCompanyAttribute>
     <GenerateAssemblyProductAttribute>false</GenerateAssemblyProductAttribute>
-    <Version>1.1.21</Version>
-    <AssemblyVersion>1.1.21.0</AssemblyVersion>
-    <FileVersion>1.1.21.0</FileVersion>
+    <Version>1.1.22</Version>
+    <AssemblyVersion>1.1.22.0</AssemblyVersion>
+    <FileVersion>1.1.22.0</FileVersion>
     <RepositoryUrl>https://github.com/Meoqan/Vaser</RepositoryUrl>
     <PackageProjectUrl>https://github.com/Meoqan/Vaser</PackageProjectUrl>
     <PackageLicenseUrl>https://github.com/Meoqan/Vaser</PackageLicenseUrl>

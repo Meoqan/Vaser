@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.26430.4
+VisualStudioVersion = 15.0.26430.12
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vaser", "Vaser\Vaser.csproj", "{18FBB9B5-1BFF-411E-ABCD-B08AAFEE2D0C}"
 EndProject
@@ -46,6 +46,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ATestClient_Disco", "ATestClient_Disco\ATestClient_Disco.csproj", "{7E90BF2F-A95A-4BDF-8A17-E59DBA2A8E5C}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ATestServer_Disco", "ATestServer_Disco\ATestServer_Disco.csproj", "{AF0777DC-E104-49C8-B0DA-04EBD026C6D6}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vaser.Unity", "Vaser.Unity\Vaser.Unity.csproj", "{2DD16C07-1132-4D30-BA7F-B5CD9CE70550}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -319,6 +321,22 @@ Global
 		{AF0777DC-E104-49C8-B0DA-04EBD026C6D6}.Release|x64.Build.0 = Release|Any CPU
 		{AF0777DC-E104-49C8-B0DA-04EBD026C6D6}.Release|x86.ActiveCfg = Release|Any CPU
 		{AF0777DC-E104-49C8-B0DA-04EBD026C6D6}.Release|x86.Build.0 = Release|Any CPU
+		{2DD16C07-1132-4D30-BA7F-B5CD9CE70550}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2DD16C07-1132-4D30-BA7F-B5CD9CE70550}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2DD16C07-1132-4D30-BA7F-B5CD9CE70550}.Debug|ARM.ActiveCfg = Debug|Any CPU
+		{2DD16C07-1132-4D30-BA7F-B5CD9CE70550}.Debug|ARM.Build.0 = Debug|Any CPU
+		{2DD16C07-1132-4D30-BA7F-B5CD9CE70550}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{2DD16C07-1132-4D30-BA7F-B5CD9CE70550}.Debug|x64.Build.0 = Debug|Any CPU
+		{2DD16C07-1132-4D30-BA7F-B5CD9CE70550}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{2DD16C07-1132-4D30-BA7F-B5CD9CE70550}.Debug|x86.Build.0 = Debug|Any CPU
+		{2DD16C07-1132-4D30-BA7F-B5CD9CE70550}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2DD16C07-1132-4D30-BA7F-B5CD9CE70550}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2DD16C07-1132-4D30-BA7F-B5CD9CE70550}.Release|ARM.ActiveCfg = Release|Any CPU
+		{2DD16C07-1132-4D30-BA7F-B5CD9CE70550}.Release|ARM.Build.0 = Release|Any CPU
+		{2DD16C07-1132-4D30-BA7F-B5CD9CE70550}.Release|x64.ActiveCfg = Release|Any CPU
+		{2DD16C07-1132-4D30-BA7F-B5CD9CE70550}.Release|x64.Build.0 = Release|Any CPU
+		{2DD16C07-1132-4D30-BA7F-B5CD9CE70550}.Release|x86.ActiveCfg = Release|Any CPU
+		{2DD16C07-1132-4D30-BA7F-B5CD9CE70550}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

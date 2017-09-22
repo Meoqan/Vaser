@@ -23,8 +23,8 @@ namespace Vaser
         private Socket _SocketTCPClient;
         //private NamedPipeServerStream _NamedPipeServerStream;
         //private NamedPipeClientStream _NamedPipeClientStream;
-
-        public bool StreamIsConnected
+        
+        public  bool StreamIsConnected
         {
             get; set;
         }
@@ -41,21 +41,19 @@ namespace Vaser
         private int bytesRead;
 
         private byte[] _buff = new byte[65012];
-
+        
         public static volatile bool IsInOnEmptyBufferQueue;
         private static object _CallOnEmptyBuffer_Lock = new object();
         private static Queue<LinkEventArgs> _CallOnEmptyBufferQueue = new Queue<LinkEventArgs>();
-
+        
         private MemoryStream _rms2 = null;
         private BinaryReader _rbr2 = null;
 
         private VaserOptions _Mode = null;
 
         private VaserSSLServer _vSSLS = null;
-        private VaserKerberosServer _vKerberosS = null;
         private VaserSSLClient _vSSLC = null;
-        private VaserKerberosClient _vKerberosC = null;
-
+        
         private bool IsInSendQueue = false;
 
         private AsyncCallback mySendNotEncryptedCallback = null;
@@ -109,7 +107,7 @@ namespace Vaser
         /// <summary>
         /// Creates a new connection for processing data
         /// </summary>
-        public Connection(Socket client, bool _IsServer, VaserOptions Mode, PortalCollection PColl, VaserKerberosServer KerberosS, VaserSSLServer SSLS, VaserKerberosClient KerberosC, VaserSSLClient SSLC, VaserServer srv = null)
+        public Connection(Socket client, bool _IsServer, VaserOptions Mode, PortalCollection PColl, VaserSSLServer SSLS, VaserSSLClient SSLC, VaserServer srv = null)
         {
             IsServer = _IsServer;
             StreamIsConnected = true;
@@ -122,9 +120,7 @@ namespace Vaser
             _PCollection = PColl;
 
             _vSSLS = SSLS;
-            _vKerberosS = KerberosS;
             _vSSLC = SSLC;
-            _vKerberosC = KerberosC;
 
             _SocketTCPClient = client;
             _SocketTCPClient.LingerState = new LingerOption(true, 0);
@@ -142,12 +138,7 @@ namespace Vaser
                 mySendNotEncryptedCallback = new AsyncCallback(SendNotEncryptedCallback);
                 myReceiveNotEncryptedCallback = new AsyncCallback(ReceiveNotEncryptedCallback);
             }
-            if (Mode == VaserOptions.ModeKerberos)
-            {
-                mySendKerberosCallback = new AsyncCallback(SendKerberosCallback);
-                myReceiveKerberosCallback = new AsyncCallback(ReceiveKerberosCallback);
-            }
-
+            
             if (Mode == VaserOptions.ModeSSL)
             {
                 mySendSSLCallback = new AsyncCallback(SendSSLCallback);
@@ -181,7 +172,7 @@ namespace Vaser
 
                     Stop();
 
-                    if (_rbr2 != null) _rbr2.Dispose();
+                    if (_rbr2 != null) _rbr2.Close();
                     if (_rbr2 != null) _rbr2 = null;
                     if (_rms2 != null) _rms2.Dispose();
                     if (_buff != null) _buff = null;
@@ -222,11 +213,7 @@ namespace Vaser
             {
 
                 // encryption
-                if (_Mode == VaserOptions.ModeKerberos)
-                {
-                    QueueSend = QueueSendKerberos;
-                    _AuthStream = new NegotiateStream(new NetworkStream(_SocketTCPClient), leaveInnerStreamOpen);
-                }
+                
 
                 if (_Mode == VaserOptions.ModeSSL)
                 {
@@ -253,32 +240,7 @@ namespace Vaser
                 { //server
 
 
-                    if (_Mode == VaserOptions.ModeKerberos)
-                    {
-
-
-
-                        if (_vKerberosS._credential == null)
-                        {
-                            _AuthStream.AuthenticateAsServer();
-                        }
-                        else
-                        {
-                            _AuthStream.AuthenticateAsServer(_vKerberosS._credential, _vKerberosS._requiredProtectionLevel, _vKerberosS._requiredImpersonationLevel);
-                        }
-
-
-                        link.IsAuthenticated = _AuthStream.IsAuthenticated;
-                        link.IsEncrypted = _AuthStream.IsEncrypted;
-                        link.IsMutuallyAuthenticated = _AuthStream.IsMutuallyAuthenticated;
-                        link.IsSigned = _AuthStream.IsSigned;
-                        link.IsServer = _AuthStream.IsServer;
-
-                        IIdentity id = _AuthStream.RemoteIdentity;
-
-                        link.UserName = id.Name;
-                    }
-
+                    
 
                     if (_Mode == VaserOptions.ModeSSL)
                     {
@@ -316,36 +278,7 @@ namespace Vaser
                 else
                 { //client
 
-                    if (_Mode == VaserOptions.ModeKerberos)
-                    {
-
-                        if (_vKerberosC._credential == null)
-                        {
-                            _AuthStream.AuthenticateAsClient();
-                        }
-                        else
-                        {
-                            if (_vKerberosC._requiredProtectionLevel == ProtectionLevel.None && _vKerberosC._requiredImpersonationLevel == TokenImpersonationLevel.None)
-                            {
-                                _AuthStream.AuthenticateAsClient(_vKerberosC._credential, _vKerberosC._targetName);
-                            }
-                            else
-                            {
-                                _AuthStream.AuthenticateAsClient(_vKerberosC._credential, _vKerberosC._targetName, _vKerberosC._requiredProtectionLevel, _vKerberosC._requiredImpersonationLevel);
-                            }
-                        }
-
-
-                        link.IsAuthenticated = _AuthStream.IsAuthenticated;
-                        link.IsEncrypted = _AuthStream.IsEncrypted;
-                        link.IsMutuallyAuthenticated = _AuthStream.IsMutuallyAuthenticated;
-                        link.IsSigned = _AuthStream.IsSigned;
-                        link.IsServer = _AuthStream.IsServer;
-
-                        IIdentity id = _AuthStream.RemoteIdentity;
-
-                    }
-
+                   
                     if (_Mode == VaserOptions.ModeSSL)
                     {
 
@@ -373,7 +306,6 @@ namespace Vaser
 
                     _IsAccepted = true;
                     if (_Mode == VaserOptions.ModeNotEncrypted) ThreadPool.QueueUserWorkItem(ReceiveNotEncrypted);
-                    if (_Mode == VaserOptions.ModeKerberos) ThreadPool.QueueUserWorkItem(ReceiveKerberos);
                     if (_Mode == VaserOptions.ModeSSL) ThreadPool.QueueUserWorkItem(ReceiveSSL);
                 }
 
@@ -409,7 +341,6 @@ namespace Vaser
                 _IsAccepted = true;
                 //new Thread(Receive).Start();
                 if (_Mode == VaserOptions.ModeNotEncrypted) ThreadPool.QueueUserWorkItem(ReceiveNotEncrypted);
-                if (_Mode == VaserOptions.ModeKerberos) ThreadPool.QueueUserWorkItem(ReceiveKerberos);
                 if (_Mode == VaserOptions.ModeSSL) ThreadPool.QueueUserWorkItem(ReceiveSSL);
             }
         }
@@ -531,7 +462,8 @@ namespace Vaser
             try
             {
                 if (_SocketTCPClient.Connected) _SocketTCPClient.Shutdown(SocketShutdown.Send);
-            }catch
+            }
+            catch
             {
                 //error
             }
@@ -557,7 +489,8 @@ namespace Vaser
                 StreamIsConnected = false;
                 Stop();
 
-                if (_rbr2 != null) _rbr2.Dispose();
+                
+                if (_rbr2 != null) _rbr2.Close();
                 if (_rbr2 != null) _rbr2 = null;
                 if (_rms2 != null) _rms2.Dispose();
                 if (_buff != null) _buff = null;
@@ -581,7 +514,7 @@ namespace Vaser
                     StreamIsConnected = false;
                     Stop();
 
-                    if (_rbr2 != null) _rbr2.Dispose();
+                    if (_rbr2 != null) _rbr2.Close();
                     if (_rbr2 != null) _rbr2 = null;
                     if (_rms2 != null) _rms2.Dispose();
                     if (_buff != null) _buff = null;
@@ -593,7 +526,7 @@ namespace Vaser
                 StreamIsConnected = false;
                 Stop();
 
-                if (_rbr2 != null) _rbr2.Dispose();
+                if (_rbr2 != null) _rbr2.Close();
                 if (_rbr2 != null) _rbr2 = null;
                 if (_rms2 != null) _rms2.Dispose();
                 if (_buff != null) _buff = null;
@@ -611,7 +544,7 @@ namespace Vaser
                 StreamIsConnected = false;
                 Stop();
 
-                if (_rbr2 != null) _rbr2.Dispose();
+                if (_rbr2 != null) _rbr2.Close();
                 if (_rbr2 != null) _rbr2 = null;
                 if (_rms2 != null) _rms2.Dispose();
                 if (_buff != null) _buff = null;
@@ -634,7 +567,7 @@ namespace Vaser
                     StreamIsConnected = false;
                     Stop();
 
-                    if (_rbr2 != null) _rbr2.Dispose();
+                    if (_rbr2 != null) _rbr2.Close();
                     if (_rbr2 != null) _rbr2 = null;
                     if (_rms2 != null) _rms2.Dispose();
                     if (_buff != null) _buff = null;
@@ -645,7 +578,7 @@ namespace Vaser
                 StreamIsConnected = false;
                 Stop();
 
-                if (_rbr2 != null) _rbr2.Dispose();
+                if (_rbr2 != null) _rbr2.Close();
                 if (_rbr2 != null) _rbr2 = null;
                 if (_rms2 != null) _rms2.Dispose();
                 if (_buff != null) _buff = null;
@@ -663,7 +596,7 @@ namespace Vaser
                 StreamIsConnected = false;
                 Stop();
 
-                if (_rbr2 != null) _rbr2.Dispose();
+                if (_rbr2 != null) _rbr2.Close();
                 if (_rbr2 != null) _rbr2 = null;
                 if (_rms2 != null) _rms2.Dispose();
                 if (_buff != null) _buff = null;
@@ -686,7 +619,7 @@ namespace Vaser
                     StreamIsConnected = false;
                     Stop();
 
-                    if (_rbr2 != null) _rbr2.Dispose();
+                    if (_rbr2 != null) _rbr2.Close();
                     if (_rbr2 != null) _rbr2 = null;
                     if (_rms2 != null) _rms2.Dispose();
                     if (_buff != null) _buff = null;
@@ -697,7 +630,7 @@ namespace Vaser
                 StreamIsConnected = false;
                 Stop();
 
-                if (_rbr2 != null) _rbr2.Dispose();
+                if (_rbr2 != null) _rbr2.Close();
                 if (_rbr2 != null) _rbr2 = null;
                 if (_rms2 != null) _rms2.Dispose();
                 if (_buff != null) _buff = null;
