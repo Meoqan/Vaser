@@ -135,7 +135,7 @@ namespace test_server
                 //Time tick
                 Thread.Sleep(1);
             }
-
+            Thread.Sleep(5000);
             //close Server
             Console.WriteLine("Close Server");
             Server1.Stop();

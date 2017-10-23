@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Net;
+using Windows.Foundation;
+using Windows.System.Threading;
 
 namespace Vaser
 {
@@ -11,6 +13,8 @@ namespace Vaser
     {
         //internal static object _Static_ThreadLock = new object();
         //private static List<Link> _LinkList = new List<Link>();
+
+        internal object _OnEventLink_ThreadLock = new object();
 
         //private object _Data_Lock = new object();
         private object _Connection_Lock = new object();
@@ -215,9 +219,7 @@ namespace Vaser
 
             if (Connect._IsAccepted == false)
             {
-
                 Connect.AcceptConnection();
-
             }
         }
 
@@ -227,8 +229,10 @@ namespace Vaser
         /// <param name="e">The link connection.</param>
         protected virtual void OnDisconnectingLink(LinkEventArgs e)
         {
-
-            Disconnecting?.Invoke(this, e);
+            lock (_OnEventLink_ThreadLock)
+            {
+                Disconnecting?.Invoke(this, e);
+            }
         }
 
         /// <summary>
@@ -237,7 +241,6 @@ namespace Vaser
         /// <param name="e">The link connection.</param>
         protected internal virtual void OnEmptyBuffer(LinkEventArgs e)
         {
-
             EmptyBuffer?.Invoke(this, e);
         }
 
@@ -297,11 +300,12 @@ namespace Vaser
                 {
                     lnk = this
                 };
-                OnDisconnectingLink(args);
+                //OnDisconnectingLink(args);
+                IAsyncAction asyncAction = ThreadPool.RunAsync((workItem) =>{ OnDisconnectingLink(args);  });
+                
             }
 
             //Debug.WriteLine("Link.Dispose ended");
         }
-
     }
 }

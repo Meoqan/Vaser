@@ -245,7 +245,7 @@ namespace VaserUnitTest
                 Server1.Stop();
                 Server2.Stop();
             }
-            catch (Exception e)
+            catch
             {
                 lock (LongTimeTest.threadlock)
                 {

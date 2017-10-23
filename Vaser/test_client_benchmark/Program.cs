@@ -82,7 +82,7 @@ namespace test_client_benchmark
                 Thread.Sleep(1000);
             }
             //Thread.Sleep(1);
-            Console.ReadKey();
+            //Console.ReadKey();
             //}
         }
 

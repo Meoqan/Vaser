@@ -595,11 +595,11 @@ namespace Vaser
             for (int x = 0; x < b.Length; x++) b[x] = _DecodeMSReader.ReadDecimal();
             field.SetValue(this, b);
         }
-
+        int MaximumPacketSize = Options.MaximumPacketSize;
         void ReadNetVector2A(FieldInfo field)
         {
             int c = _DecodeMSReader.ReadInt32();
-            if (c * 8 > (_ReadSize - _ReadCounter) || _ReadSize > Options.MaximumPacketSize) throw new Exception("Array is beond the packetlimits! Hacking attempt?");
+            if (c * 8 > (_ReadSize - _ReadCounter) || _ReadSize > MaximumPacketSize) throw new Exception("Array is beond the packetlimits! Hacking attempt?");
             _ReadCounter += c * 8;
             NetVector2[] b = new NetVector2[c];
             for (int x = 0; x < b.Length; x++) b[x] = new NetVector2(_DecodeMSReader.ReadSingle(), _DecodeMSReader.ReadSingle());

@@ -29,6 +29,10 @@ namespace Vaser
             get; set;
         }
 
+        int MaximumPacketSize = Options.MaximumPacketSize;
+        int PacketHeadSize = Options.PacketHeadSize;
+        bool EnableHeartbeat = Options.EnableHeartbeat;
+        int HeartbeatMilliseconds = Options.HeartbeatMilliseconds; // 60 sec
 
         public bool Disposed;
         public volatile bool BootupDone = false;
@@ -77,6 +81,7 @@ namespace Vaser
 
         private byte[] _timeoutdata = BitConverter.GetBytes((int)(-1));
         private Packet_Send _timeoutpacket = new Packet_Send(BitConverter.GetBytes((int)(-1)), false);
+        private Timer HeartbeatTimer = null;
 
         internal volatile bool _IsAccepted = false;
 
@@ -197,6 +202,16 @@ namespace Vaser
             }
         }
 
+        private void OnHeartbeatEvent(object source)
+        {
+            //Debug.WriteLine("Send Heartbeat packet. "+DateTime.Now);
+            lock (link.SendData_Lock)
+            {
+                if (link.SendDataPortalArrayOUTPUT[0] != null) link.SendDataPortalArrayOUTPUT[0].Enqueue(_timeoutpacket);
+            }
+            QueueSend();
+        }
+
         /// <summary>
         /// Handles the connection process of clients
         /// </summary>
@@ -309,7 +324,10 @@ namespace Vaser
                     if (_Mode == VaserOptions.ModeSSL) ThreadPool.QueueUserWorkItem(ReceiveSSL);
                 }
 
-
+                if (EnableHeartbeat)
+                {
+                    HeartbeatTimer = new Timer(new TimerCallback(OnHeartbeatEvent), null, HeartbeatMilliseconds, HeartbeatMilliseconds);
+                }
 
             }
             catch (AuthenticationException e)
@@ -461,6 +479,12 @@ namespace Vaser
             StreamIsConnected = false;
             try
             {
+                if (HeartbeatTimer != null)
+                {
+                    HeartbeatTimer.Dispose();
+                    HeartbeatTimer = null;
+                }
+
                 if (_SocketTCPClient.Connected) _SocketTCPClient.Shutdown(SocketShutdown.Send);
             }
             catch
@@ -663,7 +687,7 @@ namespace Vaser
                             mode = 1;
                             action2 = true;
 
-                            // recive keep alive packet
+                            // Receive Heartbeat packet
                             if (size == -1)
                             {
                                 mode = 0;
@@ -673,7 +697,7 @@ namespace Vaser
                             {
                                 //Debug.WriteLine("size " + size );
                                 // if the Packetsize is beond the limits, terminate the connection. maybe a Hacking attempt?
-                                if (size > Options.MaximumPacketSize || size < Options.PacketHeadSize)
+                                if (size > MaximumPacketSize || size < PacketHeadSize)
                                 {
                                     //Debug.WriteLine("The Size was: " + size + " > the Packetsize is beond the limits, terminate the connection. maybe a Hacking attempt?");
                                     this.Stop();
@@ -687,7 +711,7 @@ namespace Vaser
                         if ((_rms2.Length - _rms2.Position) >= size)
                         {
 
-                            if (size == Options.PacketHeadSize)
+                            if (size == PacketHeadSize)
                             {
                                 inlist.Add(new Packet_Recv(link, _rbr2));
                                 //_PCollection.GivePacketToClass(new Packet_Recv(link, _rbr2));
@@ -696,7 +720,7 @@ namespace Vaser
                             {
                                 Packet_Recv Recv = new Packet_Recv(link, _rbr2)
                                 {
-                                    Data = _rbr2.ReadBytes(size - Options.PacketHeadSize)
+                                    Data = _rbr2.ReadBytes(size - PacketHeadSize)
                                 };
                                 //_PCollection.GivePacketToClass(Recv);
                                 inlist.Add(Recv);

@@ -20,7 +20,7 @@ namespace Vaser
         NamedPipeServerStream _pipeServer;
 
         //private Thread _ListenThread;
-        private volatile bool _ServerOnline = true;
+        //private volatile bool _ServerOnline = true;
         //private System.Timers.Timer _aTimer;
         private static Timer _GCTimer;
 
@@ -30,10 +30,10 @@ namespace Vaser
         private object _NewLinkList_ThreadLock = new object();
         private List<Link> _NewLinkList = new List<Link>();
 
-        private VaserOptions _ServerOption = null;
+        //private VaserOptions _ServerOption = null;
         private VaserSSLServer _vSSL = null;
 
-        private PortalCollection _PCollection = null;
+        //private PortalCollection _PCollection = null;
 
         /// <summary>
         /// EventHandler for new connected links.
@@ -50,14 +50,7 @@ namespace Vaser
         /// </summary>
         public PortalCollection PCollection
         {
-            get
-            {
-                return _PCollection;
-            }
-            set
-            {
-                _PCollection = value;
-            }
+            get; set;
         }
 
         /// <summary>
@@ -65,14 +58,7 @@ namespace Vaser
         /// </summary>
         internal VaserOptions ServerOption
         {
-            get
-            {
-                return _ServerOption;
-            }
-            set
-            {
-                _ServerOption = value;
-            }
+            get; set;
         }
 
         internal List<Connection> ConnectionList
@@ -109,20 +95,8 @@ namespace Vaser
 
         private bool ServerOnline
         {
-            get
-            {
-                return _ServerOnline;
-            }
-            set
-            {
-                _ServerOnline = value;
-                if (!_ServerOnline)
-                {
-                    //_aTimer.Enabled = false;
-
-                }
-            }
-        }
+            get; set;
+        } = true;
 
         /// <summary>
         /// Stops the Vaser Server
@@ -134,11 +108,12 @@ namespace Vaser
             {
                 _TCPListener.Stop();
             }
+            DoStop();
             //_aTimer.Enabled = false;
         }
 
         /// <summary>
-        /// Stops Vaser
+        /// Stops the garbage collector Timer
         /// </summary>
         public static void StopEngine()
         {
@@ -155,9 +130,11 @@ namespace Vaser
         {
             try
             {
-                if (_ServerOption == VaserOptions.ModeNamedPipeServerStream)
+                if (ServerOption == VaserOptions.ModeNamedPipeServerStream)
                 {
-                }else { 
+                    throw new NotImplementedException();
+                }
+                else { 
                     _TCPListener.Start();
                 }
 
@@ -290,15 +267,18 @@ namespace Vaser
             if (!ServerOnline || !Options.Operating)
             {
                 //_aTimer.Enabled = false;
+                Connection[] cArray = null;
 
                 lock (_ConnectionList_ThreadLock)
                 {
-                    foreach (Connection Con in _ConnectionList)
-                    {
-                        Con.Stop();
-                    }
-                    _ConnectionList.Clear();
+                    cArray = _ConnectionList.ToArray();
                 }
+
+                foreach (Connection Con in cArray)
+                {
+                    Con.Stop();
+                }
+
 
                 _TCPListener.Stop();
             }
@@ -308,7 +288,7 @@ namespace Vaser
         {
             try
             {
-                Connection con = new Connection((Socket)Client, true, _ServerOption, _PCollection, _vSSL, null, this);
+                Connection con = new Connection((Socket)Client, true, ServerOption, PCollection, _vSSL, null, this);
 
                 lock (_ConnectionList_ThreadLock)
                 {
@@ -376,8 +356,10 @@ namespace Vaser
         /// <param name="e">Contains the connection link.</param>
         protected virtual void OnNewLink(LinkEventArgs e)
         {
-
-            NewLink?.Invoke(this, e);
+            lock (e.lnk._OnEventLink_ThreadLock)
+            {
+                NewLink?.Invoke(this, e);
+            }
         }
 
         internal void RemoveFromConnectionList(Connection con)
@@ -402,8 +384,10 @@ namespace Vaser
         /// <param name="e">Contains the connection link.</param>
         protected virtual void OnDisconnectingLink(LinkEventArgs e)
         {
-
-            DisconnectingLink?.Invoke(this, e);
+            lock (e.lnk._OnEventLink_ThreadLock)
+            {
+                DisconnectingLink?.Invoke(this, e);
+            }
         }
 
     }

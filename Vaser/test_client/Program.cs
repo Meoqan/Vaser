@@ -118,7 +118,7 @@ namespace test_client
                         online = false;
                     }
                 }
-                Thread.Sleep(2000);
+                Thread.Sleep(1000);
 
                 //entfernen
                 //if (lnk1.IsConnected == false) online = false;

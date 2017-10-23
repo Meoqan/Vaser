@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Net;
+using System.Threading;
 
 namespace Vaser
 {
@@ -11,6 +12,8 @@ namespace Vaser
     {
         //internal static object _Static_ThreadLock = new object();
         //private static List<Link> _LinkList = new List<Link>();
+
+        internal object _OnEventLink_ThreadLock = new object();
 
         //private object _Data_Lock = new object();
         private object _Connection_Lock = new object();
@@ -35,7 +38,7 @@ namespace Vaser
         /// merged mapping for sending (removed empty spaces for reduced QoS operations)
         /// </summary>
         internal Queue<Packet_Send>[] SendDataPortalArrayOUTPUT = null;
-        
+
         /// <summary>
         /// EventHandler for disconnecting
         /// </summary>
@@ -145,7 +148,7 @@ namespace Vaser
             get;
             internal set;
         }
-        
+
         internal Connection Connect
         {
             get;
@@ -215,20 +218,20 @@ namespace Vaser
 
             if (Connect._IsAccepted == false)
             {
-                
                 Connect.AcceptConnection();
-                
             }
         }
-        
+
         /// <summary>
         /// Raises an event if the link is disconnected.
         /// </summary>
         /// <param name="e">The link connection.</param>
         protected virtual void OnDisconnectingLink(LinkEventArgs e)
         {
-
-            Disconnecting?.Invoke(this, e);
+            lock (_OnEventLink_ThreadLock)
+            {
+                Disconnecting?.Invoke(this, e);
+            }
         }
 
         /// <summary>
@@ -237,7 +240,6 @@ namespace Vaser
         /// <param name="e">The link connection.</param>
         protected internal virtual void OnEmptyBuffer(LinkEventArgs e)
         {
-
             EmptyBuffer?.Invoke(this, e);
         }
 
@@ -297,11 +299,16 @@ namespace Vaser
                 {
                     lnk = this
                 };
-                OnDisconnectingLink(args);
+                //OnDisconnectingLink(args);
+                ThreadPool.QueueUserWorkItem(EventWorker, args);
             }
-            
+
             //Debug.WriteLine("Link.Dispose ended");
         }
 
+        private void EventWorker(object state)
+        {
+            OnDisconnectingLink((LinkEventArgs)state);
+        }
     }
 }

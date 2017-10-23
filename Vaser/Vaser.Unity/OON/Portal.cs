@@ -50,6 +50,8 @@ namespace Vaser
         internal MemoryStream _sendMS = null;
         internal BinaryWriter _sendBW = null;
 
+        int PacketHeadSize = Options.PacketHeadSize;
+
         /// <summary>
         /// Creates a new portal. Please register it at 'MyPortalCollection.RegisterPortal(...)'.
         /// </summary>
@@ -206,18 +208,18 @@ namespace Vaser
                 counter = 0;
                 if (con != null)
                 {
-                    _sendMS.Position = Options.PacketHeadSize + 4;
+                    _sendMS.Position = PacketHeadSize + 4;
 
                     Packet_Send spacket = con.PackContainer(_sendBW, _sendMS);
                     //big datapacket dedected
-                    if (_sendMS.Position >= Options.MaximumPacketSize + 4)
+                    /*if (_sendMS.Position >= Options.MaximumPacketSize + 4)
                     {
                         return;
                     }
                     else
-                    {
-                        counter = (ushort)_sendMS.Position - 4;
-                    }
+                    {*/
+                    counter = (ushort)_sendMS.Position - 4;
+                    //}
 
 
                     //write header
@@ -244,7 +246,7 @@ namespace Vaser
                 }
                 else
                 {
-                    counter += Options.PacketHeadSize;
+                    counter += PacketHeadSize;
 
                     //write header
                     _sendMS.Position = 0;
@@ -293,7 +295,7 @@ namespace Vaser
                 {
                     if (packet.Data == null)
                     {
-                        _sendBW.Write(Options.PacketHeadSize);
+                        _sendBW.Write(PacketHeadSize);
 
                         _sendBW.Write(this._PID);
                         _sendBW.Write(packet.ObjectID);
@@ -301,7 +303,7 @@ namespace Vaser
                     }
                     else
                     {
-                        _sendBW.Write(packet.Data.Length + Options.PacketHeadSize);
+                        _sendBW.Write(packet.Data.Length + PacketHeadSize);
 
                         _sendBW.Write(this._PID);
                         _sendBW.Write(packet.ObjectID);
